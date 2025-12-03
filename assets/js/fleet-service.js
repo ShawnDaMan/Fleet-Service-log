@@ -404,12 +404,12 @@ async function saveTableToGoogleSheets() {
       const row = table.rows[i];
       if (row.classList.contains('total-row') || row.classList.contains('grand-total-row')) continue;
       values.push([
-        row.cells[1].innerText, // Vehicle ID
-        row.cells[2].innerText, // Service Type
-        row.cells[3].innerText, // Date
-        row.cells[4].innerText, // Cost
-        row.cells[5].innerText, // Cause
-        row.cells[6].innerText  // Notes
+        row.cells[1].innerText, // Vehicle ID → Sheet column A
+        row.cells[2].innerText, // Service Type → Sheet column B
+        row.cells[3].innerText, // Date → Sheet column C
+        row.cells[4].innerText, // Cost → Sheet column D
+        row.cells[5].innerText, // Cause → Sheet column E
+        row.cells[6].innerText  // Notes → Sheet column F
       ]);
     }
     
@@ -450,16 +450,16 @@ async function loadTableFromGoogleSheets() {
     const rows = response.result.values || [];
     // Skip header row (index 0)
     rows.slice(1).forEach((rowData, idx) => {
-      if (!rowData[0] || rowData[0] === '' || rowData[0]?.includes('TOTAL')) return;
+      if (!rowData[1] || rowData[1] === '' || rowData[1]?.includes('TOTAL')) return;
       
       const newRow = table.insertRow();
       newRow.insertCell(0).innerText = idx + 1; // Row number
-      newRow.insertCell(1).innerText = rowData[0] || ''; // Vehicle ID
-      newRow.insertCell(2).innerText = rowData[1] || ''; // Service Type
-      newRow.insertCell(3).innerText = rowData[2] || ''; // Date
-      newRow.insertCell(4).innerText = rowData[3] || '$0.00'; // Cost
-      newRow.insertCell(5).innerText = rowData[4] || ''; // Cause
-      newRow.insertCell(6).innerText = rowData[5] || ''; // Notes
+      newRow.insertCell(1).innerText = rowData[1] || ''; // Vehicle ID from column B
+      newRow.insertCell(2).innerText = rowData[2] || ''; // Service Type from column C
+      newRow.insertCell(3).innerText = rowData[0] || ''; // Date from column A
+      newRow.insertCell(4).innerText = rowData[3] || '$0.00'; // Cost from column D
+      newRow.insertCell(5).innerText = rowData[4] || ''; // Cause from column E
+      newRow.insertCell(6).innerText = rowData[5] || ''; // Notes from column F
       
       const editCell = newRow.insertCell(7);
       editCell.appendChild(createEditButton());
