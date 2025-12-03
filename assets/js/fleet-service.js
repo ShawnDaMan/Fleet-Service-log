@@ -1,6 +1,42 @@
 // Shared JS extracted from fleet_service_log pages
 // Sections: utilities, filters, events, add/edit, totals, storage, CSV import/export, init
 
+// Google Sheets Configuration
+const GOOGLE_SHEETS_CONFIG = {
+  apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
+  spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
+  range: 'Sheet1!A2:E' // Starting from row 2 (skip header)
+};
+
+let gapiLoaded = false;
+let gapiInitialized = false;
+
+// Initialize Google API
+function initGoogleAPI() {
+  return new Promise((resolve, reject) => {
+    if (gapiInitialized) {
+      resolve();
+      return;
+    }
+    if (typeof gapi === 'undefined') {
+      reject(new Error('Google API not loaded'));
+      return;
+    }
+    gapi.load('client', async () => {
+      try {
+        await gapi.client.init({
+          apiKey: GOOGLE_SHEETS_CONFIG.apiKey,
+          discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
+        });
+        gapiInitialized = true;
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
 // Helpers
 function parseCost(str) {
   return parseFloat(String(str).replace(/[^0-9.-]+/g, '')) || 0;
@@ -256,8 +292,90 @@ function updateTotals() {
 }
 
 // ========================================
-// SECTION 7: STORAGE
+// SECTION 7: GOOGLE SHEETS STORAGE
 // ========================================
+async function saveTableToGoogleSheets() {
+  try {
+    await initGoogleAPI();
+    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+    const values = [];
+    
+    for (let i = 0; i < table.rows.length; i++) {
+      const row = table.rows[i];
+      if (row.classList.contains('total-row') || row.classList.contains('grand-total-row')) continue;
+      values.push([
+        row.cells[3].innerText, // Date
+        row.cells[1].innerText, // Vehicle ID
+        row.cells[2].innerText, // Service Type
+        row.cells[4].innerText, // Cost
+        row.cells[5].innerText + (row.cells[6].innerText ? ' | ' + row.cells[6].innerText : '') // Cause | Notes
+      ]);
+    }
+    
+    // Clear existing data first
+    await gapi.client.sheets.spreadsheets.values.clear({
+      spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
+      range: 'Sheet1!A2:E1000'
+    });
+    
+    // Write new data
+    if (values.length > 0) {
+      await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
+        range: 'Sheet1!A2',
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: values }
+      });
+    }
+    
+    console.log('Data saved to Google Sheets successfully');
+  } catch (error) {
+    console.error('Error saving to Google Sheets:', error);
+    alert('Failed to save to Google Sheets. Check console for details.');
+  }
+}
+
+async function loadTableFromGoogleSheets() {
+  try {
+    await initGoogleAPI();
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
+      range: GOOGLE_SHEETS_CONFIG.range
+    });
+    
+    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+    table.innerHTML = '';
+    
+    const rows = response.result.values || [];
+    rows.forEach((rowData, idx) => {
+      if (!rowData[0] || rowData[1] === '' || rowData[1]?.includes('TOTAL')) return;
+      
+      const newRow = table.insertRow();
+      newRow.insertCell(0).innerText = idx + 1; // Row number
+      newRow.insertCell(1).innerText = rowData[1] || ''; // Vehicle ID
+      newRow.insertCell(2).innerText = rowData[2] || ''; // Service Type
+      newRow.insertCell(3).innerText = rowData[0] || ''; // Date
+      newRow.insertCell(4).innerText = rowData[3] || '$0.00'; // Cost
+      
+      // Split Notes column (Cause | Notes)
+      const notesField = rowData[4] || '';
+      const notesParts = notesField.split(' | ');
+      newRow.insertCell(5).innerText = notesParts[0] || ''; // Cause
+      newRow.insertCell(6).innerText = notesParts[1] || ''; // Notes
+      
+      const editCell = newRow.insertCell(7);
+      editCell.appendChild(createEditButton());
+    });
+    
+    updateTotals();
+    console.log('Data loaded from Google Sheets successfully');
+  } catch (error) {
+    console.error('Error loading from Google Sheets:', error);
+    alert('Failed to load from Google Sheets. Check console for details.');
+  }
+}
+
+// Keep localStorage functions for backward compatibility / offline mode
 function saveTableToStorage() {
   const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
   const data = [];
@@ -275,26 +393,13 @@ function saveTableToStorage() {
     });
   }
   localStorage.setItem('fleetServiceLog', JSON.stringify(data));
+  // Also save to Google Sheets
+  saveTableToGoogleSheets();
 }
 
 function loadTableFromStorage() {
-  const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
-  const data = JSON.parse(localStorage.getItem('fleetServiceLog') || '[]');
-  table.innerHTML = '';
-  data.forEach((rowData, idx) => {
-    if (rowData.vehicleId === '' || rowData.vehicleId.includes('TOTAL')) return;
-    const newRow = table.insertRow();
-    newRow.insertCell(0).innerText = idx + 1;
-    newRow.insertCell(1).innerText = rowData.vehicleId;
-    newRow.insertCell(2).innerText = rowData.serviceType;
-    newRow.insertCell(3).innerText = rowData.serviceDate;
-    newRow.insertCell(4).innerText = rowData.serviceCost;
-    newRow.insertCell(5).innerText = rowData.serviceCause;
-    newRow.insertCell(6).innerText = rowData.serviceNotes;
-    const editCell = newRow.insertCell(7);
-    editCell.appendChild(createEditButton());
-  });
-  updateTotals();
+  // Load from Google Sheets instead
+  loadTableFromGoogleSheets();
 }
 
 // ========================================
