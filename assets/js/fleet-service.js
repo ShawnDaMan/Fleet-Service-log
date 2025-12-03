@@ -4,14 +4,18 @@
 // Google Sheets Configuration
 const GOOGLE_SHEETS_CONFIG = {
   apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
+  clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com',
   spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
-  range: 'Sheet1!A:E' // All rows, columns A to E
+  range: 'Sheet1!A:E', // All rows, columns A to E
+  discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+  scope: 'https://www.googleapis.com/auth/spreadsheets'
 };
 
 let gapiLoaded = false;
 let gapiInitialized = false;
+let isSignedIn = false;
 
-// Initialize Google API
+// Initialize Google API with OAuth
 function initGoogleAPI() {
   return new Promise((resolve, reject) => {
     if (gapiInitialized) {
@@ -22,12 +26,21 @@ function initGoogleAPI() {
       reject(new Error('Google API not loaded'));
       return;
     }
-    gapi.load('client', async () => {
+    gapi.load('client:auth2', async () => {
       try {
         await gapi.client.init({
           apiKey: GOOGLE_SHEETS_CONFIG.apiKey,
-          discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
+          clientId: GOOGLE_SHEETS_CONFIG.clientId,
+          discoveryDocs: GOOGLE_SHEETS_CONFIG.discoveryDocs,
+          scope: GOOGLE_SHEETS_CONFIG.scope
         });
+        
+        // Listen for sign-in state changes
+        gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+        
+        // Handle initial sign-in state
+        updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+        
         gapiInitialized = true;
         resolve();
       } catch (error) {
@@ -35,6 +48,46 @@ function initGoogleAPI() {
       }
     });
   });
+}
+
+function updateSigninStatus(signedIn) {
+  isSignedIn = signedIn;
+  const signInBtn = document.getElementById('signInBtn');
+  const signOutBtn = document.getElementById('signOutBtn');
+  const serviceForm = document.getElementById('serviceForm');
+  const actionsDiv = document.querySelector('.actions');
+  
+  if (signedIn) {
+    if (signInBtn) signInBtn.style.display = 'none';
+    if (signOutBtn) signOutBtn.style.display = 'inline-block';
+    if (serviceForm) serviceForm.style.display = 'block';
+    if (actionsDiv) actionsDiv.style.display = 'block';
+    
+    // Show edit/delete buttons
+    document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => {
+      btn.style.display = 'inline-block';
+    });
+    
+    loadTableFromGoogleSheets();
+  } else {
+    if (signInBtn) signInBtn.style.display = 'inline-block';
+    if (signOutBtn) signOutBtn.style.display = 'none';
+    if (serviceForm) serviceForm.style.display = 'none';
+    if (actionsDiv) actionsDiv.style.display = 'none';
+    
+    // Hide edit/delete buttons
+    document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => {
+      btn.style.display = 'none';
+    });
+  }
+}
+
+function handleSignIn() {
+  gapi.auth2.getAuthInstance().signIn();
+}
+
+function handleSignOut() {
+  gapi.auth2.getAuthInstance().signOut();
 }
 
 // Helpers
@@ -399,9 +452,14 @@ async function loadTableFromGoogleSheets() {
       editCell.appendChild(createDeleteButton());
     });
     
-    // Hide Edit/Delete buttons in read-only mode
-    const allButtons = table.querySelectorAll('.edit-btn, .delete-btn');
-    allButtons.forEach(btn => btn.style.display = 'none');
+    // Show/hide buttons based on sign-in status
+    if (isSignedIn) {
+      const allButtons = table.querySelectorAll('.edit-btn, .delete-btn');
+      allButtons.forEach(btn => btn.style.display = 'inline-block');
+    } else {
+      const allButtons = table.querySelectorAll('.edit-btn, .delete-btn');
+      allButtons.forEach(btn => btn.style.display = 'none');
+    }
     
     updateTotals();
     console.log('Data loaded from Google Sheets successfully');
