@@ -6,7 +6,7 @@ const GOOGLE_SHEETS_CONFIG = {
   apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
   clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com',
   spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
-  range: 'Sheet1!A:E',
+  range: 'Sheet1!A:F',
   discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
   scope: 'https://www.googleapis.com/auth/spreadsheets'
 };
@@ -404,18 +404,19 @@ async function saveTableToGoogleSheets() {
       const row = table.rows[i];
       if (row.classList.contains('total-row') || row.classList.contains('grand-total-row')) continue;
       values.push([
-        row.cells[3].innerText, // Date
         row.cells[1].innerText, // Vehicle ID
         row.cells[2].innerText, // Service Type
+        row.cells[3].innerText, // Date
         row.cells[4].innerText, // Cost
-        row.cells[5].innerText + (row.cells[6].innerText ? ' | ' + row.cells[6].innerText : '') // Cause | Notes
+        row.cells[5].innerText, // Cause
+        row.cells[6].innerText  // Notes
       ]);
     }
     
     // Clear existing data first
     await gapi.client.sheets.spreadsheets.values.clear({
       spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
-      range: 'Sheet1!A2:E1000'
+      range: 'Sheet1!A2:F1000'
     });
     
     // Write new data
@@ -449,20 +450,16 @@ async function loadTableFromGoogleSheets() {
     const rows = response.result.values || [];
     // Skip header row (index 0)
     rows.slice(1).forEach((rowData, idx) => {
-      if (!rowData[0] || rowData[1] === '' || rowData[1]?.includes('TOTAL')) return;
+      if (!rowData[0] || rowData[0] === '' || rowData[0]?.includes('TOTAL')) return;
       
       const newRow = table.insertRow();
       newRow.insertCell(0).innerText = idx + 1; // Row number
-      newRow.insertCell(1).innerText = rowData[1] || ''; // Vehicle ID
-      newRow.insertCell(2).innerText = rowData[2] || ''; // Service Type
-      newRow.insertCell(3).innerText = rowData[0] || ''; // Date
+      newRow.insertCell(1).innerText = rowData[0] || ''; // Vehicle ID
+      newRow.insertCell(2).innerText = rowData[1] || ''; // Service Type
+      newRow.insertCell(3).innerText = rowData[2] || ''; // Date
       newRow.insertCell(4).innerText = rowData[3] || '$0.00'; // Cost
-      
-      // Split Notes column (Cause | Notes)
-      const notesField = rowData[4] || '';
-      const notesParts = notesField.split(' | ');
-      newRow.insertCell(5).innerText = notesParts[0] || ''; // Cause
-      newRow.insertCell(6).innerText = notesParts[1] || ''; // Notes
+      newRow.insertCell(5).innerText = rowData[4] || ''; // Cause
+      newRow.insertCell(6).innerText = rowData[5] || ''; // Notes
       
       const editCell = newRow.insertCell(7);
       editCell.appendChild(createEditButton());
