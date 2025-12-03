@@ -6,16 +6,17 @@ const GOOGLE_SHEETS_CONFIG = {
   apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
   clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com',
   spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
-  range: 'Sheet1!A:E', // All rows, columns A to E
+  range: 'Sheet1!A:E',
   discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
   scope: 'https://www.googleapis.com/auth/spreadsheets'
 };
 
-let gapiLoaded = false;
 let gapiInitialized = false;
 let isSignedIn = false;
+let accessToken = null;
+let tokenClient = null;
 
-// Initialize Google API with OAuth
+// Initialize Google API with new GIS
 function initGoogleAPI() {
   return new Promise((resolve, reject) => {
     if (gapiInitialized) {
@@ -26,22 +27,33 @@ function initGoogleAPI() {
       reject(new Error('Google API not loaded'));
       return;
     }
-    gapi.load('client:auth2', async () => {
+    
+    gapi.load('client', async () => {
       try {
         await gapi.client.init({
           apiKey: GOOGLE_SHEETS_CONFIG.apiKey,
-          clientId: GOOGLE_SHEETS_CONFIG.clientId,
-          discoveryDocs: GOOGLE_SHEETS_CONFIG.discoveryDocs,
-          scope: GOOGLE_SHEETS_CONFIG.scope
+          discoveryDocs: GOOGLE_SHEETS_CONFIG.discoveryDocs
         });
         
-        // Listen for sign-in state changes
-        gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
-        
-        // Handle initial sign-in state
-        updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+        // Initialize Google Identity Services token client
+        if (typeof google !== 'undefined' && google.accounts) {
+          tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_SHEETS_CONFIG.clientId,
+            scope: GOOGLE_SHEETS_CONFIG.scope,
+            callback: (response) => {
+              if (response.error) {
+                console.error('Token error:', response);
+                return;
+              }
+              accessToken = response.access_token;
+              gapi.client.setToken({access_token: accessToken});
+              updateSigninStatus(true);
+            }
+          });
+        }
         
         gapiInitialized = true;
+        updateSigninStatus(false); // Start in signed-out state
         resolve();
       } catch (error) {
         reject(error);
@@ -71,7 +83,7 @@ function updateSigninStatus(signedIn) {
     if (serviceForm) serviceForm.style.display = 'none';
     if (actionsDiv) actionsDiv.style.display = 'none';
     
-    // Try to load data in read-only mode (may fail, that's ok)
+    // Try to load data in read-only mode
     loadTableFromGoogleSheets().catch(() => {
       console.log('Not signed in - viewing in read-only mode');
     });
@@ -79,11 +91,20 @@ function updateSigninStatus(signedIn) {
 }
 
 function handleSignIn() {
-  gapi.auth2.getAuthInstance().signIn();
+  if (tokenClient) {
+    tokenClient.requestAccessToken({prompt: 'consent'});
+  }
 }
 
 function handleSignOut() {
-  gapi.auth2.getAuthInstance().signOut();
+  if (accessToken) {
+    google.accounts.oauth2.revoke(accessToken, () => {
+      console.log('Access token revoked');
+    });
+    accessToken = null;
+    gapi.client.setToken(null);
+    updateSigninStatus(false);
+  }
 }
 
 // Helpers
