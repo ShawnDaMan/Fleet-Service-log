@@ -552,6 +552,8 @@ window.onload = function() {
   // Initialize Google API and then load data
   initGoogleAPI().catch(error => {
     console.error('Failed to initialize Google API:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    if (error.details) console.error('Error details object:', error.details);
     // Fallback: show sign-in button anyway
     const signInBtn = document.getElementById('signInBtn');
     if (signInBtn) signInBtn.style.display = 'inline-block';
