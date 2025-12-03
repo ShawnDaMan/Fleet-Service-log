@@ -549,7 +549,14 @@ function importFromCSV(csvText) {
 // SECTION 9: PAGE INITIALIZATION
 // ========================================
 window.onload = function() {
-  loadTableFromStorage();
+  // Initialize Google API and then load data
+  initGoogleAPI().catch(error => {
+    console.error('Failed to initialize Google API:', error);
+    // Fallback: show sign-in button anyway
+    const signInBtn = document.getElementById('signInBtn');
+    if (signInBtn) signInBtn.style.display = 'inline-block';
+  });
+  
   populateFilterVehicles();
   toggleOtherVehicle();
   toggleOtherServiceType();
