@@ -5,7 +5,7 @@
 const GOOGLE_SHEETS_CONFIG = {
   apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
   spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
-  range: 'Sheet1!A2:E' // Starting from row 2 (skip header)
+  range: 'Sheet1!A:E' // All rows, columns A to E
 };
 
 let gapiLoaded = false;
@@ -347,7 +347,8 @@ async function loadTableFromGoogleSheets() {
     table.innerHTML = '';
     
     const rows = response.result.values || [];
-    rows.forEach((rowData, idx) => {
+    // Skip header row (index 0)
+    rows.slice(1).forEach((rowData, idx) => {
       if (!rowData[0] || rowData[1] === '' || rowData[1]?.includes('TOTAL')) return;
       
       const newRow = table.insertRow();
