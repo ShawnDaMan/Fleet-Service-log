@@ -371,7 +371,8 @@ async function loadTableFromGoogleSheets() {
     console.log('Data loaded from Google Sheets successfully');
   } catch (error) {
     console.error('Error loading from Google Sheets:', error);
-    alert('Failed to load from Google Sheets. Check console for details.');
+    console.error('Error details:', error.result ? error.result.error : error.message);
+    alert('Failed to load from Google Sheets: ' + (error.result?.error?.message || error.message || 'Unknown error'));
   }
 }
 
