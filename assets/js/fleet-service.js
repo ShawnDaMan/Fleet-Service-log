@@ -63,11 +63,7 @@ function updateSigninStatus(signedIn) {
     if (serviceForm) serviceForm.style.display = 'block';
     if (actionsDiv) actionsDiv.style.display = 'block';
     
-    // Show edit/delete buttons
-    document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => {
-      btn.style.display = 'inline-block';
-    });
-    
+    // Load data after sign-in
     loadTableFromGoogleSheets();
   } else {
     if (signInBtn) signInBtn.style.display = 'inline-block';
@@ -75,9 +71,9 @@ function updateSigninStatus(signedIn) {
     if (serviceForm) serviceForm.style.display = 'none';
     if (actionsDiv) actionsDiv.style.display = 'none';
     
-    // Hide edit/delete buttons
-    document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => {
-      btn.style.display = 'none';
+    // Try to load data in read-only mode (may fail, that's ok)
+    loadTableFromGoogleSheets().catch(() => {
+      console.log('Not signed in - viewing in read-only mode');
     });
   }
 }
@@ -466,7 +462,11 @@ async function loadTableFromGoogleSheets() {
   } catch (error) {
     console.error('Error loading from Google Sheets:', error);
     console.error('Error details:', error.result ? error.result.error : error.message);
-    alert('Failed to load from Google Sheets: ' + (error.result?.error?.message || error.message || 'Unknown error'));
+    
+    // Only show alert if signed in (otherwise it's expected to fail)
+    if (isSignedIn) {
+      alert('Failed to load from Google Sheets: ' + (error.result?.error?.message || error.message || 'Unknown error'));
+    }
   }
 }
 
