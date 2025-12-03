@@ -399,6 +399,10 @@ async function loadTableFromGoogleSheets() {
       editCell.appendChild(createDeleteButton());
     });
     
+    // Hide Edit/Delete buttons in read-only mode
+    const allButtons = table.querySelectorAll('.edit-btn, .delete-btn');
+    allButtons.forEach(btn => btn.style.display = 'none');
+    
     updateTotals();
     console.log('Data loaded from Google Sheets successfully');
   } catch (error) {

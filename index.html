@@ -10,7 +10,11 @@
 <body>
   <h1>Fleet Service Log</h1>
   
-  <form id="serviceForm">
+  <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 20px; margin: 20px auto; max-width: 90%; border-radius: 6px;">
+    <strong>📊 View-Only Mode:</strong> This page displays live data from Google Sheets. To add or edit records, please update the <a href="https://docs.google.com/spreadsheets/d/1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q/edit" target="_blank" style="color: #2980b9; font-weight: bold;">Google Sheet directly</a>.
+  </div>
+  
+  <form id="serviceForm" style="display: none;">
     <span class="form-row">
       <label>Vehicle ID:
         <select id="vehicleIdSelect" required>
@@ -46,7 +50,7 @@
     <span class="form-row"><label>Notes: <input type="text" id="serviceNotes"></label></span>
     <span class="form-row"><button type="submit">Add Service</button></span>
   </form>
-  <div class="actions">
+  <div class="actions" style="display: none;">
     <button id="exportCsvBtn">Export to CSV</button>
     <input type="file" id="importCsvInput" accept=".csv" style="margin-left:16px;" />
     <button id="importCsvBtn">Import CSV</button>
