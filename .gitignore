@@ -1,0 +1,9 @@
+# Backup and duplicate files
+fleet_service_log_backup.html
+fleet_service_log (5).csv
+fleet_service_log.csv
+Fleet_Service_Log.zip
+
+# System files
+.DS_Store
+Thumbs.db

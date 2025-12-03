@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fleet Service Cost Charts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
+      margin: 0;
+      background: #f7f9fa;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(44,62,80,0.08);
+    }
+    .chart-wrapper {
+      margin-bottom: 40px;
+      padding: 20px;
+      background: #f7f9fa;
+      border-radius: 8px;
+    }
+    .chart-title {
+      color: #2980b9;
+      font-weight: 600;
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+    }
+    #costChart {
+      max-height: 400px;
+    }
+    .back-link {
+      text-align: center;
+      margin-top: 30px;
+    }
+    .back-link a {
+      color: #2980b9;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .back-link a:hover {
+      text-decoration: underline;
+    }
+    footer {
+      text-align: center;
+      padding: 20px 0;
+      color: #34495e;
+      font-size: 0.9rem;
+      margin-top: 40px;
+      border-top: 1px solid #e1e7ed;
+    }
+  </style>
+</head>
+<body>
+  <h1>Fleet Service Cost Analysis</h1>
+  <div class="container">
+    <div class="chart-wrapper">
+      <div class="chart-title">Total Service Costs by Vehicle</div>
+      <canvas id="costChart"></canvas>
+    </div>
+    
+    <div style="margin-top: 30px; padding: 20px; background: #eaf1f7; border-radius: 8px;">
+      <h3 style="margin-top: 0; color: #2c3e50; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">Cost Summary</h3>
+      <table id="summaryTable" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: #2980b9; color: #fff;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #1a5a8a;">Vehicle ID</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #1a5a8a;">Total Cost (USD)</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #1a5a8a;">Entry Count</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    
+    <div class="back-link">
+      <a href="fleet_service_log_backup.html">← Back to Service Log</a>
+    </div>
+  </div>
+
+  <footer>
+    <p>This page is for Data use only. Records are maintained solely by the Brays Motor Museum Shop services.<br>
+    (See Shawn Nicholson for any clarifications)</p>
+  </footer>
+
+  <script>
+    function loadAndDisplayCharts() {
+      const data = JSON.parse(localStorage.getItem('fleetServiceLog') || '[]');
+      
+      // Calculate totals by vehicle
+      const vehicleTotals = {};
+      const vehicleCount = {};
+      
+      data.forEach(entry => {
+        const vehicleId = entry.vehicleId;
+        const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
+        
+        if (!vehicleTotals[vehicleId]) {
+          vehicleTotals[vehicleId] = 0;
+          vehicleCount[vehicleId] = 0;
+        }
+        vehicleTotals[vehicleId] += cost;
+        vehicleCount[vehicleId]++;
+      });
+      
+      // Sort vehicles by name
+      const sortedVehicles = Object.keys(vehicleTotals).sort();
+      const costs = sortedVehicles.map(v => vehicleTotals[v]);
+      
+      // Create bar chart
+      const ctx = document.getElementById('costChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sortedVehicles,
+          datasets: [{
+            label: 'Total Service Cost (USD)',
+            data: costs,
+            backgroundColor: '#2980b9',
+            borderColor: '#1a5a8a',
+            borderWidth: 1,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          indexAxis: 'x',
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Cost (USD)'
+              }
+            },
+            x: {
+              ticks: {
+                maxRotation: 45,
+                minRotation: 0
+              }
+            }
+          }
+        }
+      });
+      
+      // Populate summary table
+      const summaryTable = document.querySelector('#summaryTable tbody');
+      summaryTable.innerHTML = '';
+      
+      sortedVehicles.forEach(vehicle => {
+        const row = summaryTable.insertRow();
+        row.innerHTML = `
+          <td style="padding: 10px; border: 1px solid #e1e7ed;">${vehicle}</td>
+          <td style="padding: 10px; text-align: right; border: 1px solid #e1e7ed;">$${vehicleTotals[vehicle].toFixed(2)}</td>
+          <td style="padding: 10px; text-align: right; border: 1px solid #e1e7ed;">${vehicleCount[vehicle]}</td>
+        `;
+      });
+      
+      // Add totals row
+      const totalCost = Object.values(vehicleTotals).reduce((a, b) => a + b, 0);
+      const totalEntries = Object.values(vehicleCount).reduce((a, b) => a + b, 0);
+      
+      const totalRow = summaryTable.insertRow();
+      totalRow.style.fontWeight = 'bold';
+      totalRow.style.background = '#2980b9';
+      totalRow.style.color = '#fff';
+      totalRow.innerHTML = `
+        <td style="padding: 10px; border: 1px solid #1a5a8a;">TOTAL</td>
+        <td style="padding: 10px; text-align: right; border: 1px solid #1a5a8a;">$${totalCost.toFixed(2)}</td>
+        <td style="padding: 10px; text-align: right; border: 1px solid #1a5a8a;">${totalEntries}</td>
+      `;
+    }
+    
+    window.onload = function() {
+      loadAndDisplayCharts();
+    };
+  </script>
+</body>
+</html>

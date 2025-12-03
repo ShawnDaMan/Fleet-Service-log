@@ -1,0 +1,80 @@
+/* Shared styles extracted from fleet_service_log pages */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Roboto:wght@400;500&display=swap');
+
+/*
+  Background image configuration:
+  - By default the CSS uses a relative path pointing to `assets/images/brays-webpage-snapshot.png`
+  - Place your image at `assets/images/brays-webpage-snapshot.png` or override the variable
+    in a page-specific stylesheet to point elsewhere.
+*/
+:root {
+  --fleet-bg-image: url('../images/brays-webpage-snapshot.png');
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: var(--fleet-bg-image) center center no-repeat;
+  background-size: cover;
+  opacity: 0.4;
+  z-index: -1;
+  pointer-events: none;
+}
+body {
+  font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
+  margin: 0;
+  background: #f7f9fa;
+}
+h1 {
+  text-align: center;
+  margin-top: 30px;
+  color: #2c3e50;
+  font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+form#serviceForm {
+  background: #fff; max-width: 700px; margin: 30px auto 20px auto; padding: 24px 32px; border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(44,62,80,0.08); display: flex; flex-wrap: wrap; gap: 18px 32px; align-items: flex-end;
+  font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
+}
+.form-row { flex: 1 1 220px; margin-bottom: 0; display: flex; flex-direction: column; }
+label { font-weight: 500; color: #34495e; margin-bottom: 6px; font-family: 'Montserrat', 'Roboto', Arial, sans-serif; }
+input, select, button {
+  font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
+  font-size: 1rem; padding: 7px 10px; border: 1px solid #bfc9d1; border-radius: 6px; background: #f7f9fa; margin-bottom: 0; transition: border-color 0.2s;
+}
+input:focus, select:focus { border-color: #2980b9; outline: none; }
+button {
+  background: #2980b9; color: #fff; border: none; cursor: pointer; font-weight: 600; margin-top: 18px; box-shadow: 0 1px 4px rgba(44,62,80,0.08); transition: background 0.2s;
+  font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+  letter-spacing: 0.5px;
+}
+button:hover { background: #1a5a8a; }
+table {
+  width: 95%; margin: 30px auto 0 auto; border-collapse: collapse; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(44,62,80,0.08); overflow: hidden;
+  font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
+}
+th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #e1e7ed; }
+th {
+  background: #eaf1f7; color: #2c3e50; font-weight: 600; letter-spacing: 0.5px;
+  font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+}
+tbody tr:hover { background: #f0f6fb; transition: background 0.2s; }
+h2 {
+  text-align: center; margin-top: 40px; color: #2980b9; font-size: 1.3rem; letter-spacing: 0.5px;
+  font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+  font-weight: 600;
+}
+.actions { width:95%;margin:20px auto 0 auto;text-align:right; font-family: 'Roboto', 'Montserrat', Arial, sans-serif; }
+footer {
+  font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+}
+
+/* Utility: small responsive tweaks */
+@media (max-width: 640px) {
+  form#serviceForm { padding: 18px; gap: 12px 16px; }
+  table { width: 98%; }
+}

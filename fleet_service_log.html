@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fleet Service Log</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <h1>Fleet Service Log</h1>
+  
+  <form id="serviceForm">
+    <span class="form-row">
+      <label>Vehicle ID:
+        <select id="vehicleIdSelect" required>
+          <option value="">Select Vehicle</option>
+          <option value="2023 Chevrolet Z06">2023 Chevrolet Z06</option>
+          <option value="2023 Chevrolet Z51">2023 Chevrolet Z51</option>
+          <option value="2023 Ford GT 500">2023 Ford GT 500</option>
+          <option value="1972 Chevrolet el Camino">1972 Chevrolet el Camino</option>
+          <option value="1969 Chevrolet Camaro">1969 Chevrolet Camaro</option>
+          <option value="1968 Plymouth roadrunner">1968 Plymouth roadrunner</option>
+          <option value="2015 Dodge Challenger">2015 Dodge Challenger</option>
+          <option value="2017 Dodge Charger">2017 Dodge Charger</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <input type="text" id="vehicleIdOther" placeholder="Enter vehicle" style="display:none; margin-top:6px;" />
+    </span>
+    <span class="form-row">
+      <label>Service Type:
+        <select id="serviceTypeSelect" required>
+          <option value="">Select Service Type</option>
+          <option value="Engine Oils and Filters">Engine Oils and Filters</option>
+          <option value="Tires">Tires</option>
+          <option value="Cosmetic">Cosmetic</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <input type="text" id="serviceTypeOther" placeholder="Enter service type" style="display:none; margin-top:6px;" />
+    </span>
+    <span class="form-row"><label>Date: <input type="date" id="serviceDate" required></label></span>
+    <span class="form-row"><label>Cost (USD): <input type="number" id="serviceCost" step="0.01" required></label></span>
+    <span class="form-row"><label>Cause: <input type="text" id="serviceCause" required></label></span>
+    <span class="form-row"><label>Notes: <input type="text" id="serviceNotes"></label></span>
+    <span class="form-row"><button type="submit">Add Service</button></span>
+  </form>
+  <div class="actions">
+    <button id="exportCsvBtn">Export to CSV</button>
+    <input type="file" id="importCsvInput" accept=".csv" style="margin-left:16px;" />
+    <button id="importCsvBtn">Import CSV</button>
+    <div style="margin-top:12px; color:#34495e; font-size:0.98rem; text-align:left; font-weight:bold;">
+      <span style="font-weight:bold;">Note: After exporting, move the downloaded CSV file to <br>
+      <span style="font-family:monospace; font-weight:bold;">C:\Users\shawn\OneDrive\Documentos\Fleet Service Log</span>
+      for safekeeping or future import.</span>
+    </div>
+  </div>
+
+  <div style="background: #fff; max-width: 90%; margin: 20px auto; padding: 20px 24px; border-radius: 12px; box-shadow: 0 2px 12px rgba(44,62,80,0.08);">
+    <h3 style="margin-top: 0; color: #2c3e50; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">Filter Entries</h3>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end;">
+      <div style="flex: 1; min-width: 180px;">
+        <label style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">Vehicle ID:</label>
+        <select id="filterVehicleId" style="font-family: 'Roboto', 'Montserrat', Arial, sans-serif; font-size: 1rem; padding: 7px 10px; border: 1px solid #bfc9d1; border-radius: 6px; background: #f7f9fa; width: 100%; transition: border-color 0.2s;">
+          <option value="">All Vehicles</option>
+        </select>
+      </div>
+      <div style="flex: 1; min-width: 140px;">
+        <label style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">From Date:</label>
+        <input type="date" id="filterDateFrom" style="font-family: 'Roboto', 'Montserrat', Arial, sans-serif; font-size: 1rem; padding: 7px 10px; border: 1px solid #bfc9d1; border-radius: 6px; background: #f7f9fa; width: 100%; transition: border-color 0.2s;" />
+      </div>
+      <div style="flex: 1; min-width: 140px;">
+        <label style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">To Date:</label>
+        <input type="date" id="filterDateTo" style="font-family: 'Roboto', 'Montserrat', Arial, sans-serif; font-size: 1rem; padding: 7px 10px; border: 1px solid #bfc9d1; border-radius: 6px; background: #f7f9fa; width: 100%; transition: border-color 0.2s;" />
+      </div>
+      <button id="filterBtn" style="background: #2980b9; color: #fff; border: none; cursor: pointer; font-weight: 600; padding: 7px 16px; border-radius: 6px; box-shadow: 0 1px 4px rgba(44,62,80,0.08); transition: background 0.2s; font-family: 'Montserrat', 'Roboto', Arial, sans-serif; letter-spacing: 0.5px;">Filter</button>
+      <button id="clearFilterBtn" style="background: #7f8c8d; color: #fff; border: none; cursor: pointer; font-weight: 600; padding: 7px 16px; border-radius: 6px; box-shadow: 0 1px 4px rgba(44,62,80,0.08); transition: background 0.2s; font-family: 'Montserrat', 'Roboto', Arial, sans-serif; letter-spacing: 0.5px;">Clear Filter</button>
+    </div>
+  </div>
+
+  <table id="serviceTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Vehicle ID</th>
+        <th>Service Type</th>
+        <th>Date</th>
+        <th>Cost (USD)</th>
+        <th>Cause</th>
+        <th>Notes</th>
+        <th>Edit</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <h2>Totals by Vehicle</h2>
+  <table id="totalsTable">
+    <thead>
+      <tr>
+        <th>Vehicle ID</th>
+        <th>Total Cost (USD)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <script src="assets/js/fleet-service.js"></script>
+  <footer style="width:100%;text-align:center;padding:24px 0 18px 0;color:#34495e;font-size:1rem;background:transparent; font-weight:bold;">
+    <hr style="margin-bottom:16px;">
+    <div>
+      <span style="font-weight:bold;">This page is for Data use only. Records are maintained solely by the Brays Motor Museum Shop services.<br>
+      (See Shawn Nicholson for any clarifications)</span>
+    </div>
+    <div style="margin-top:16px;">
+      <a href="fleet_service_charts.html" style="color: #2980b9; text-decoration: none; font-weight: 600;">View Cost Charts →</a>
+    </div>
+  </footer>
+</body>
+</html>
