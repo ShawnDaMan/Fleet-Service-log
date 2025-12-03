@@ -60,6 +60,15 @@ function createSaveButton() {
   return btn;
 }
 
+function createDeleteButton() {
+  const btn = document.createElement('button');
+  btn.textContent = 'Delete';
+  btn.classList.add('delete-btn');
+  btn.style.marginLeft = '8px';
+  btn.style.background = '#e74c3c';
+  return btn;
+}
+
 // ========================================
 // SECTION 1: UTILITY FUNCTIONS - Show/Hide "Other" inputs
 // ========================================
@@ -212,6 +221,7 @@ document.addEventListener('submit', function(e) {
   newRow.insertCell(6).innerText = serviceNotes;
   const editCell = newRow.insertCell(7);
   editCell.appendChild(createEditButton());
+  editCell.appendChild(createDeleteButton());
   document.getElementById('serviceForm').reset();
   toggleOtherVehicle();
   toggleOtherServiceType();
@@ -250,11 +260,28 @@ function saveRow(row) {
   const editCell = row.cells[7];
   editCell.innerHTML = '';
   editCell.appendChild(createEditButton());
+  editCell.appendChild(createDeleteButton());
   updateTotals();
   saveTableToStorage();
 }
 
-// Delegated event listener for Edit/Save buttons on the table
+function deleteRow(row) {
+  if (confirm('Are you sure you want to delete this service record?')) {
+    row.remove();
+    // Renumber rows
+    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+    for (let i = 0; i < table.rows.length; i++) {
+      if (!table.rows[i].classList.contains('total-row') && !table.rows[i].classList.contains('grand-total-row')) {
+        table.rows[i].cells[0].innerText = i + 1;
+      }
+    }
+    updateTotals();
+    populateFilterVehicles();
+    saveTableToStorage();
+  }
+}
+
+// Delegated event listener for Edit/Save/Delete buttons on the table
 document.getElementById('serviceTable').addEventListener('click', function(e) {
   if (e.target.classList.contains('edit-btn')) {
     const row = e.target.closest('tr');
@@ -262,6 +289,9 @@ document.getElementById('serviceTable').addEventListener('click', function(e) {
   } else if (e.target.classList.contains('save-btn')) {
     const row = e.target.closest('tr');
     if (row && row.parentElement.id !== 'serviceTable') saveRow(row);
+  } else if (e.target.classList.contains('delete-btn')) {
+    const row = e.target.closest('tr');
+    if (row && row.parentElement.id !== 'serviceTable') deleteRow(row);
   }
 });
 
@@ -366,6 +396,7 @@ async function loadTableFromGoogleSheets() {
       
       const editCell = newRow.insertCell(7);
       editCell.appendChild(createEditButton());
+      editCell.appendChild(createDeleteButton());
     });
     
     updateTotals();
