@@ -450,16 +450,16 @@ async function loadTableFromGoogleSheets() {
     const rows = response.result.values || [];
     // Skip header row (index 0)
     rows.slice(1).forEach((rowData, idx) => {
-      if (!rowData[1] || rowData[1] === '' || rowData[1]?.includes('TOTAL')) return;
+      if (!rowData[0] || rowData[0] === '' || rowData[0]?.includes('TOTAL')) return;
       
       const newRow = table.insertRow();
       newRow.insertCell(0).innerText = idx + 1; // Row number
-      newRow.insertCell(1).innerText = rowData[1] || ''; // Vehicle ID from column B
-      newRow.insertCell(2).innerText = rowData[2] || ''; // Service Type from column C
-      newRow.insertCell(3).innerText = rowData[0] || ''; // Date from column A
-      newRow.insertCell(4).innerText = rowData[3] || '$0.00'; // Cost from column D
-      newRow.insertCell(5).innerText = rowData[4] || ''; // Cause from column E
-      newRow.insertCell(6).innerText = rowData[5] || ''; // Notes from column F
+      newRow.insertCell(1).innerText = rowData[0] || ''; // Vehicle ID from Sheet column A
+      newRow.insertCell(2).innerText = rowData[1] || ''; // Service Type from Sheet column B
+      newRow.insertCell(3).innerText = rowData[2] || ''; // Date from Sheet column C
+      newRow.insertCell(4).innerText = rowData[3] || '$0.00'; // Cost from Sheet column D
+      newRow.insertCell(5).innerText = rowData[4] || ''; // Cause from Sheet column E
+      newRow.insertCell(6).innerText = rowData[5] || ''; // Notes from Sheet column F
       
       const editCell = newRow.insertCell(7);
       editCell.appendChild(createEditButton());
