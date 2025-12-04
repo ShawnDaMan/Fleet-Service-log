@@ -152,6 +152,67 @@
   <div class="nav-links">
     <a href="index.html">← Service Log</a>
     <a href="fleet_service_charts.html">📊 Charts</a>
+    <button id="addIssueBtn" style="background: #e74c3c; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: 10px;" onclick="showAddIssueModal()">+ Report Issue</button>
+  </div>
+
+  <!-- Add Issue Modal -->
+  <div id="addIssueModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+      <h3 style="margin-top: 0; color: #2c3e50;">Report Vehicle Issue</h3>
+      
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Vehicle:</label>
+        <select id="issueVehicleMake" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px; margin-bottom: 8px;">
+          <option value="">Select Vehicle Make</option>
+          <option value="2023 Chevrolet">2023 Chevrolet</option>
+          <option value="2023 Ford">2023 Ford</option>
+          <option value="1972 Chevrolet">1972 Chevrolet</option>
+          <option value="1969 Chevrolet">1969 Chevrolet</option>
+          <option value="1968 Plymouth">1968 Plymouth</option>
+          <option value="2015 Dodge">2015 Dodge</option>
+          <option value="2017 Dodge">2017 Dodge</option>
+        </select>
+        <select id="issueVehicleModel" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
+          <option value="">Select Vehicle Model</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Issue Type:</label>
+        <select id="issueType" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;" onchange="toggleOtherField()">
+          <option value="">Select Issue Type</option>
+          <option value="Tires">1. Tires</option>
+          <option value="Oil Change">2. Oil Change</option>
+          <option value="Mechanical Failure">3. Mechanical Failure</option>
+          <option value="Brakes">4. Brakes</option>
+          <option value="Other">5. Other</option>
+        </select>
+      </div>
+
+      <div id="otherIssueField" style="display: none; margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Describe Issue:</label>
+        <input type="text" id="otherIssueText" placeholder="Enter issue description" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Priority:</label>
+        <select id="issuePriority" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Additional Notes (Optional):</label>
+        <textarea id="issueNotes" rows="3" placeholder="Any additional details..." style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;"></textarea>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button onclick="closeAddIssueModal()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
+        <button onclick="submitNewIssue()" style="padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Report Issue</button>
+      </div>
+    </div>
   </div>
 
   <div class="summary-stats" id="summaryStats" style="display: none;">

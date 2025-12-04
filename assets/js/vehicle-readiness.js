@@ -273,6 +273,117 @@ async function markAsReviewed(rowIndex) {
   }
 }
 
+// Modal functions
+function showAddIssueModal() {
+  if (!isSignedIn) {
+    alert('Please sign in to report issues.');
+    return;
+  }
+  document.getElementById('addIssueModal').style.display = 'flex';
+}
+
+function closeAddIssueModal() {
+  document.getElementById('addIssueModal').style.display = 'none';
+  // Reset form
+  document.getElementById('issueVehicleMake').value = '';
+  document.getElementById('issueVehicleModel').value = '';
+  document.getElementById('issueType').value = '';
+  document.getElementById('otherIssueText').value = '';
+  document.getElementById('issuePriority').value = 'Low';
+  document.getElementById('issueNotes').value = '';
+  document.getElementById('otherIssueField').style.display = 'none';
+}
+
+function toggleOtherField() {
+  const issueType = document.getElementById('issueType').value;
+  const otherField = document.getElementById('otherIssueField');
+  otherField.style.display = issueType === 'Other' ? 'block' : 'none';
+}
+
+// Vehicle model mapping
+const vehicleModels = {
+  '2023 Chevrolet': ['Z06', 'Z51'],
+  '2023 Ford': ['GT 500'],
+  '1972 Chevrolet': ['el Camino'],
+  '1969 Chevrolet': ['Camaro'],
+  '1968 Plymouth': ['roadrunner'],
+  '2015 Dodge': ['Challenger'],
+  '2017 Dodge': ['Charger']
+};
+
+document.getElementById('issueVehicleMake').addEventListener('change', function() {
+  const make = this.value;
+  const modelSelect = document.getElementById('issueVehicleModel');
+  modelSelect.innerHTML = '<option value="">Select Vehicle Model</option>';
+  
+  if (make && vehicleModels[make]) {
+    vehicleModels[make].forEach(model => {
+      const option = document.createElement('option');
+      option.value = model;
+      option.textContent = model;
+      modelSelect.appendChild(option);
+    });
+  }
+});
+
+async function submitNewIssue() {
+  const make = document.getElementById('issueVehicleMake').value;
+  const model = document.getElementById('issueVehicleModel').value;
+  const issueType = document.getElementById('issueType').value;
+  const otherText = document.getElementById('otherIssueText').value;
+  const priority = document.getElementById('issuePriority').value;
+  const notes = document.getElementById('issueNotes').value;
+  
+  if (!make || !model || !issueType) {
+    alert('Please fill in all required fields.');
+    return;
+  }
+  
+  if (issueType === 'Other' && !otherText) {
+    alert('Please describe the issue.');
+    return;
+  }
+  
+  const mainIssue = issueType === 'Other' ? otherText : issueType;
+  const today = new Date().toLocaleDateString('en-US');
+  
+  try {
+    // Append to Google Sheet - Form Responses format:
+    // Example question, Vehicle Make, Vehicle Model, Division, Date, Main Issue, 
+    // Written Up By, Priority of Issue, Submitted By, Timestamp, [blank], Date Reviewed, Noted Issues
+    
+    const values = [[
+      '', // Example question (empty)
+      make, // Vehicle Make
+      model, // Vehicle Model
+      '', // Division (empty for now)
+      today, // Date
+      mainIssue, // Main Issue
+      'Web Dashboard', // Written Up By
+      priority, // Priority of Issue
+      'Dashboard User', // Submitted By
+      new Date().toISOString(), // Timestamp
+      '', // blank column
+      '', // Date Reviewed (empty - new issue)
+      notes // Noted Issues
+    ]];
+    
+    await gapi.client.sheets.spreadsheets.values.append({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: 'Form Responses!A:M',
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: values }
+    });
+    
+    alert('Issue reported successfully!');
+    closeAddIssueModal();
+    loadReadinessData(); // Reload to show new issue
+  } catch (error) {
+    console.error('Error submitting issue:', error);
+    alert('Failed to submit issue. Please try again.');
+  }
+}
+
 // Initialize when scripts load
 if (typeof gapi !== 'undefined') {
   gapiLoaded();
