@@ -17,43 +17,34 @@ let autoRefreshInterval = null;
 
 // Initialize Google API
 function gapiLoaded() {
-  console.log('gapiLoaded called');
   gapi.load('client', initializeGapiClient);
 }
 
 async function initializeGapiClient() {
-  console.log('initializeGapiClient called');
-  console.log('document.readyState:', document.readyState);
   await gapi.client.init({
     apiKey: READINESS_CONFIG.apiKey,
     discoveryDocs: READINESS_CONFIG.discoveryDocs,
   });
   gapiInited = true;
-  console.log('GAPI initialized successfully');
   
   // Check for stored token
   const storedToken = localStorage.getItem('google_access_token');
   const tokenExpiry = localStorage.getItem('google_token_expiry');
   
   if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-    // Token is still valid, restore session
     accessToken = storedToken;
     gapi.client.setToken({access_token: accessToken});
-    console.log('Restored stored access token');
   }
   
-  // Check if elements exist, if not wait a bit
+  // Check if elements exist, if not wait
   const checkAndLoad = () => {
     const grid = document.getElementById('readinessGrid');
     const tbody = document.getElementById('issuesTableBody');
-    console.log('Checking for elements - grid:', grid, 'tbody:', tbody);
     
     if (grid && tbody) {
-      console.log('Elements found, loading data');
       updateSigninStatus(true);
       loadReadinessData();
     } else {
-      console.log('Elements not found yet, waiting...');
       setTimeout(checkAndLoad, 100);
     }
   };
@@ -62,36 +53,29 @@ async function initializeGapiClient() {
 }
 
 function gisLoaded() {
-  console.log('gisLoaded called');
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: READINESS_CONFIG.clientId,
     scope: READINESS_CONFIG.scope,
     callback: (response) => {
       accessToken = response.access_token;
-      // Store token with expiry time (8 hours)
       const expiryTime = Date.now() + (8 * 3600 * 1000);
       localStorage.setItem('google_access_token', accessToken);
       localStorage.setItem('google_token_expiry', expiryTime);
       gapi.client.setToken({access_token: accessToken});
-      console.log('User authenticated successfully');
-      loadReadinessData(); // Reload to show "Mark as Reviewed" buttons
+      loadReadinessData();
     },
   });
   gisInited = true;
-  console.log('GIS initialized successfully');
 }
 
 function handleSignIn() {
-  console.log('handleSignIn called, tokenClient:', tokenClient);
   if (!tokenClient) {
-    // Wait for GIS to load
     const checkInterval = setInterval(() => {
       if (tokenClient) {
         clearInterval(checkInterval);
         tokenClient.requestAccessToken({prompt: 'consent'});
       }
     }, 100);
-    // Timeout after 5 seconds
     setTimeout(() => {
       clearInterval(checkInterval);
       if (!tokenClient) {
@@ -118,26 +102,16 @@ function updateSigninStatus(ready) {
 // Load readiness data from Google Sheets
 let isLoading = false;
 async function loadReadinessData() {
-  if (isLoading) {
-    console.log('Already loading, skipping...');
-    return;
-  }
+  if (isLoading) return;
   
   isLoading = true;
   try {
-    console.log('Loading readiness data...');
-    console.log('gapiInited:', gapiInited);
-    console.log('gapi.client:', typeof gapi !== 'undefined' ? gapi.client : 'undefined');
-    
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: READINESS_CONFIG.spreadsheetId,
       range: READINESS_CONFIG.range
     });
 
-    console.log('Response received:', response);
     const rows = response.result.values || [];
-    console.log('Rows found:', rows.length);
-    console.log('First few rows:', rows.slice(0, 3));
     
     if (rows.length === 0) {
       document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #7f8c8d;">No data found.</p>';
@@ -146,29 +120,21 @@ async function loadReadinessData() {
     
     if (rows.length === 1) {
       document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #7f8c8d;">No issues reported yet. All vehicles are ready!</p>';
-      updateSummaryCounts(8, 0, 0); // All 8 vehicles ready
+      updateSummaryCounts(8, 0, 0);
       return;
     }
 
-    console.log('About to process rows and display...');
-    // Skip header row and process data
-    // Columns: Example question, Vehicle Make, Vehicle Model, Division, Date, Main Issue, 
-    // Written Up By, Priority of Issue, Submitted By, Timestamp, [blank], Date Reviewed, Noted Issues
     const issuesByVehicle = {};
     
     rows.slice(1).forEach((row, index) => {
       const vehicleMake = (row[1] || '').trim();
       const vehicleModel = (row[2] || '').trim();
-      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' '); // Normalize spaces
+      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' ');
       
-      if (!vehicleName) return; // Skip empty rows
-      
-      if (index < 5) { // Log first 5 vehicles for debugging
-        console.log(`Row ${index + 2}: Make="${vehicleMake}" Model="${vehicleModel}" Combined="${vehicleName}"`);
-      }
+      if (!vehicleName) return;
       
       const issue = {
-        rowIndex: index + 2, // +2 because: +1 for header, +1 for 1-based indexing
+        rowIndex: index + 2,
         question: row[0] || '',
         division: row[3] || '',
         date: row[4] || '',
@@ -177,7 +143,7 @@ async function loadReadinessData() {
         priority: (row[7] || '').toLowerCase(),
         submittedBy: row[8] || '',
         timestamp: row[9] || '',
-        manualStatus: row[10] || '', // Column K - manual ready status
+        manualStatus: row[10] || '',
         dateReviewed: row[11] || '',
         notedIssues: row[12] || ''
       };
@@ -189,15 +155,10 @@ async function loadReadinessData() {
       issuesByVehicle[vehicleName].push(issue);
     });
 
-    console.log('Issues by vehicle:', issuesByVehicle);
-    console.log('Calling displayReadinessCards...');
     displayReadinessCards(issuesByVehicle, rows);
-    console.log('Calling displayIssuesTable...');
     displayIssuesTable(rows);
-    console.log('Display functions completed');
   } catch (error) {
     console.error('Error loading readiness data:', error);
-    console.error('Error stack:', error.stack);
     document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #e74c3c;">Error loading data. Please try again.</p>';
   } finally {
     isLoading = false;
@@ -206,9 +167,7 @@ async function loadReadinessData() {
 
 function displayReadinessCards(issuesByVehicle, allRows) {
   try {
-    console.log('displayReadinessCards called with:', issuesByVehicle);
     const grid = document.getElementById('readinessGrid');
-    console.log('Grid element:', grid);
     
     if (!grid) {
       console.error('readinessGrid element not found!');
@@ -221,94 +180,64 @@ function displayReadinessCards(issuesByVehicle, allRows) {
   let warningCount = 0;
   let notReadyCount = 0;
 
-  // Get all unique vehicle names from the spreadsheet (Make + Model from all rows)
   const allVehicles = new Set();
   
-  // Extract all unique vehicle combinations from the spreadsheet
   if (allRows && allRows.length > 1) {
-    console.log('Processing', allRows.length - 1, 'data rows to find unique vehicles...');
-    allRows.slice(1).forEach((row, idx) => {
+    allRows.slice(1).forEach((row) => {
       const vehicleMake = (row[1] || '').trim();
       const vehicleModel = (row[2] || '').trim();
-      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' '); // Normalize spaces
+      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' ');
       if (vehicleName) {
         allVehicles.add(vehicleName);
-        if (idx < 10) { // Log first 10 for debugging
-          console.log(`  Row ${idx + 2}: "${vehicleMake}" + "${vehicleModel}" = "${vehicleName}"`);
-        }
       }
     });
   }
   
   const sortedVehicles = Array.from(allVehicles).sort();
-  console.log('Total unique vehicles found:', sortedVehicles.length);
-  console.log('All unique vehicles from spreadsheet:', sortedVehicles);
   
-  // Populate the Report Issue form dropdown with these vehicles
   populateVehicleDropdown(sortedVehicles);
-
-  console.log('About to process vehicle cards for:', sortedVehicles);
   
   Array.from(allVehicles).sort().forEach(vehicleName => {
     const issues = issuesByVehicle[vehicleName] || [];
     const unreviewedIssues = issues.filter(issue => !issue.dateReviewed);
     const highPriorityIssues = unreviewedIssues.filter(issue => issue.priority.includes('high'));
     
-    // Check for manual status override in column K (index 10)
     const latestStatusOverride = issues
-      .filter(issue => issue.manualStatus) // Column K has a value
+      .filter(issue => issue.manualStatus)
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
-    
-    // Debug logging for all vehicles
-    console.log(`\n=== ${vehicleName} ===`);
-    console.log('  Issues:', issues.length, '| Unreviewed:', unreviewedIssues.length, '| High Priority:', highPriorityIssues.length);
-    if (unreviewedIssues.length > 0) {
-      console.log('  Priority values:', unreviewedIssues.map(i => `"${i.priority}"`));
-    }
     
     let status = 'ready';
     let statusText = 'Ready';
     let cardClass = 'vehicle-card';
     
-    // Filter for medium/high priority unreviewed issues (exclude low priority)
     const mediumHighPriorityIssues = unreviewedIssues.filter(issue => 
       !issue.priority.includes('low')
     );
     
-    // Priority order: High/Medium unreviewed issues override manual status, Low priority doesn't affect status
     if (highPriorityIssues.length > 0) {
-      // High priority unreviewed issues = Not Ready (overrides any manual status)
       status = 'not-ready';
       statusText = 'Not Ready';
       cardClass = 'vehicle-card not-ready';
       notReadyCount++;
-      console.log('  → Status: NOT READY (high priority issues)');
     } else if (mediumHighPriorityIssues.length > 0) {
-      // Medium priority unreviewed issues = Needs Attention (overrides any manual status)
       status = 'warning';
       statusText = 'Needs Attention';
       cardClass = 'vehicle-card warning';
       warningCount++;
-      console.log('  → Status: NEEDS ATTENTION (medium priority issues)');
     } else if (latestStatusOverride) {
-      // Manual override applies when there are NO medium/high unreviewed issues (low priority issues ignored)
       if (latestStatusOverride.manualStatus.toLowerCase().includes('not ready')) {
         status = 'not-ready';
         statusText = 'Not Ready (Manual)';
         cardClass = 'vehicle-card not-ready';
         notReadyCount++;
-        console.log('  → Status: NOT READY (manual override)');
       } else {
         status = 'ready';
         statusText = 'Ready (Manual)';
         cardClass = 'vehicle-card';
         readyCount++;
-        console.log('  → Status: READY (manual override)');
       }
     } else {
-      // No medium/high issues and no manual status = Ready
       readyCount++;
-      console.log('  → Status: READY (no issues)');
     }
 
     const card = document.createElement('div');
@@ -371,9 +300,7 @@ function displayReadinessCards(issuesByVehicle, allRows) {
 
 function displayIssuesTable(rows) {
   try {
-    console.log('displayIssuesTable called with rows:', rows.length);
     const tbody = document.getElementById('issuesTableBody');
-    console.log('Table body element:', tbody);
     
     if (!tbody) {
       console.error('issuesTableBody element not found!');
@@ -387,11 +314,7 @@ function displayIssuesTable(rows) {
     return;
   }
   
-  // Skip header row and reverse to show newest first
   const dataRows = rows.slice(1).reverse();
-  
-  console.log('accessToken for buttons:', accessToken);
-  console.log('Will show action buttons:', !!accessToken);
   
   dataRows.forEach((row, index) => {
     const vehicleMake = row[1] || '';
@@ -444,9 +367,8 @@ function displayIssuesTable(rows) {
     
     tbody.appendChild(tr);
   });
-  console.log('displayIssuesTable completed successfully');
   } catch (error) {
-    console.error('Error in displayIssuesTable:', error);
+    console.error('Error displaying issues table:', error);
   }
 }
 
@@ -469,10 +391,7 @@ async function deleteIssue(rowIndex) {
       range: `Form Responses!A${rowIndex}:M${rowIndex}`
     });
     
-    console.log('Issue deleted successfully');
     alert('Issue deleted successfully!');
-    
-    // Reload the data
     loadReadinessData();
   } catch (error) {
     console.error('Error deleting issue:', error);
@@ -842,15 +761,12 @@ window.gisLoaded = gisLoaded;
 // Poll for script availability
 const checkScriptsLoaded = setInterval(() => {
   if (typeof gapi !== 'undefined' && !gapiInited) {
-    console.log('GAPI detected, calling gapiLoaded()');
     clearInterval(checkScriptsLoaded);
     gapiLoaded();
   }
   if (typeof google !== 'undefined' && google.accounts && !gisInited) {
-    console.log('GIS detected, calling gisLoaded()');
     gisLoaded();
   }
-  // Stop checking after both are loaded
   if (gapiInited && gisInited) {
     clearInterval(checkScriptsLoaded);
   }
