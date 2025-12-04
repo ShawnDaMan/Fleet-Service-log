@@ -317,7 +317,7 @@ function displayIssuesTable(rows) {
     tbody.innerHTML = '';
   
   if (rows.length <= 1) {
-    tbody.innerHTML = '<tr><td colspan="9" style="padding: 20px; text-align: center; color: #7f8c8d;">No issues reported yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="padding: 20px; text-align: center; color: #7f8c8d;">No issues reported yet.</td></tr>';
     return;
   }
   
@@ -365,6 +365,11 @@ function displayIssuesTable(rows) {
       <td style="padding: 10px; border: 1px solid #ecf0f1;">${submittedBy}</td>
       <td style="padding: 10px; border: 1px solid #ecf0f1; ${dateReviewed ? '' : 'color: #e74c3c; font-weight: 600;'}">${dateReviewed || 'Not Reviewed'}</td>
       <td style="padding: 10px; border: 1px solid #ecf0f1;">${notedIssues}</td>
+      <td style="padding: 10px; border: 1px solid #ecf0f1; white-space: nowrap;">
+        ${accessToken ? `
+          <button onclick="deleteIssue(${rows.length - index})" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">Delete</button>
+        ` : '<span style="color: #95a5a6; font-size: 0.85rem;">Sign in to edit</span>'}
+      </td>
     `;
     
     tbody.appendChild(tr);
@@ -372,6 +377,36 @@ function displayIssuesTable(rows) {
   console.log('displayIssuesTable completed successfully');
   } catch (error) {
     console.error('Error in displayIssuesTable:', error);
+  }
+}
+
+// Delete an issue row
+async function deleteIssue(rowIndex) {
+  if (!accessToken) {
+    alert('Please sign in with Google to delete issues.');
+    handleSignIn();
+    return;
+  }
+  
+  if (!confirm('Are you sure you want to delete this issue? This cannot be undone.')) {
+    return;
+  }
+  
+  try {
+    // Delete the row by clearing all values
+    await gapi.client.sheets.spreadsheets.values.clear({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: `Form Responses!A${rowIndex}:M${rowIndex}`
+    });
+    
+    console.log('Issue deleted successfully');
+    alert('Issue deleted successfully!');
+    
+    // Reload the data
+    loadReadinessData();
+  } catch (error) {
+    console.error('Error deleting issue:', error);
+    alert('Failed to delete issue. Please try again.');
   }
 }
 
