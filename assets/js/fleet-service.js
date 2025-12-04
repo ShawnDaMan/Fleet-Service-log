@@ -710,7 +710,10 @@ function importFromCSV(csvText) {
 // ========================================
 window.onload = function() {
   // Initialize Google API and then load data
-  initGoogleAPI().catch(error => {
+  initGoogleAPI().then(() => {
+    // Fetch vehicle readiness after API is initialized
+    fetchVehicleReadiness();
+  }).catch(error => {
     console.error('Failed to initialize Google API:', error);
     console.error('Error details:', JSON.stringify(error, null, 2));
     if (error.details) console.error('Error details object:', error.details);
