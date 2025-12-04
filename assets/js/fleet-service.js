@@ -465,8 +465,71 @@ function updateSummaryCards() {
   document.getElementById('totalRecords').textContent = table.rows.length - document.querySelectorAll('.grand-total-row, .total-row').length;
   document.getElementById('monthlyCost').textContent = formatCost(monthlyCount);
   
-  // Fetch readiness data if available (placeholder for now)
-  document.getElementById('vehiclesReady').textContent = '—';
+  // Fetch readiness data
+  fetchVehicleReadiness();
+}
+
+// Fetch vehicle readiness data from the Form Responses sheet
+async function fetchVehicleReadiness() {
+  try {
+    const READINESS_SPREADSHEET_ID = '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk';
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: READINESS_SPREADSHEET_ID,
+      range: 'Form Responses!A:M',
+    });
+
+    const rows = response.result.values;
+    if (!rows || rows.length <= 1) {
+      document.getElementById('vehiclesReady').textContent = '0';
+      return;
+    }
+
+    // Process issues by vehicle (same logic as vehicle-readiness.js)
+    const issuesByVehicle = {};
+    rows.slice(1).forEach((row) => {
+      const vehicleMake = (row[1] || '').trim();
+      const vehicleModel = (row[2] || '').trim();
+      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' ');
+      
+      if (!vehicleName) return;
+      
+      const issue = {
+        priority: (row[7] || '').toLowerCase(),
+        dateReviewed: row[11] || '',
+        manualStatus: row[10] || ''
+      };
+      
+      if (!issuesByVehicle[vehicleName]) {
+        issuesByVehicle[vehicleName] = [];
+      }
+      issuesByVehicle[vehicleName].push(issue);
+    });
+
+    // Count ready vehicles
+    let readyCount = 0;
+    Object.keys(issuesByVehicle).forEach(vehicleName => {
+      const issues = issuesByVehicle[vehicleName];
+      const unreviewedIssues = issues.filter(issue => !issue.dateReviewed);
+      const highPriorityIssues = unreviewedIssues.filter(issue => issue.priority.includes('high'));
+      const mediumHighPriorityIssues = unreviewedIssues.filter(issue => !issue.priority.includes('low'));
+      
+      const latestStatusOverride = issues
+        .filter(issue => issue.manualStatus)
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+      
+      // Same logic as vehicle-readiness.js
+      if (highPriorityIssues.length === 0 && mediumHighPriorityIssues.length === 0) {
+        if (!latestStatusOverride || !latestStatusOverride.manualStatus.toLowerCase().includes('not ready')) {
+          readyCount++;
+        }
+      }
+    });
+
+    document.getElementById('vehiclesReady').textContent = readyCount;
+  } catch (error) {
+    console.error('Error fetching readiness data:', error);
+    document.getElementById('vehiclesReady').textContent = '—';
+  }
 }
 
 // ========================================
