@@ -173,6 +173,7 @@ async function loadReadinessData() {
         priority: (row[7] || '').toLowerCase(),
         submittedBy: row[8] || '',
         timestamp: row[9] || '',
+        manualStatus: row[10] || '', // Column K - manual ready status
         dateReviewed: row[11] || '',
         notedIssues: row[12] || ''
       };
@@ -233,11 +234,29 @@ function displayReadinessCards(issuesByVehicle) {
     const unreviewedIssues = issues.filter(issue => !issue.dateReviewed);
     const highPriorityIssues = unreviewedIssues.filter(issue => issue.priority.includes('high'));
     
+    // Check for manual status override in column K (index 10)
+    const latestStatusOverride = issues
+      .filter(issue => issue.manualStatus) // Column K has a value
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+    
     let status = 'ready';
     let statusText = 'Ready';
     let cardClass = 'vehicle-card';
     
-    if (highPriorityIssues.length > 0) {
+    // Manual override takes precedence
+    if (latestStatusOverride) {
+      if (latestStatusOverride.manualStatus.toLowerCase().includes('not ready')) {
+        status = 'not-ready';
+        statusText = 'Not Ready (Manual)';
+        cardClass = 'vehicle-card not-ready';
+        notReadyCount++;
+      } else {
+        status = 'ready';
+        statusText = 'Ready (Manual)';
+        cardClass = 'vehicle-card';
+        readyCount++;
+      }
+    } else if (highPriorityIssues.length > 0) {
       status = 'not-ready';
       statusText = 'Not Ready';
       cardClass = 'vehicle-card not-ready';
@@ -419,7 +438,7 @@ async function deleteIssue(rowIndex) {
   }
 }
 
-// Set vehicle status manually (creates a status override entry)
+// Set vehicle status manually (stores in column K of a dedicated status row)
 async function setVehicleStatus(vehicleName, status) {
   if (!accessToken) {
     alert('Please sign in with Google to update vehicle status.');
@@ -434,17 +453,17 @@ async function setVehicleStatus(vehicleName, status) {
   
   try {
     const timestamp = new Date().toLocaleString();
-    const priority = status === 'ready' ? 'Low' : 'High';
-    const mainIssue = status === 'ready' ? 'Vehicle Status: Ready for service' : 'Vehicle Status: Not ready for service';
     
     // Parse vehicle name
     const parts = vehicleName.split(' ');
     const make = parts.slice(0, -1).join(' ') || vehicleName;
     const model = parts[parts.length - 1] || '';
     
-    // Append new row with status update
+    // Create a status override entry with column K set to the status
     const values = [
-      ['Status Override', make, model, 'Fleet', new Date().toLocaleDateString(), mainIssue, 'System', priority, 'Manual Override', timestamp, '', '', `Manual status set to: ${statusText}`]
+      ['Vehicle Status Override', make, model, 'Fleet', new Date().toLocaleDateString(), 
+       `Manual status override: ${statusText}`, 'System', 'Manual', 'System', timestamp, 
+       statusText, '', `Manual override set by user`]
     ];
     
     await gapi.client.sheets.spreadsheets.values.append({
