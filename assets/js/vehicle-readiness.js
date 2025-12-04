@@ -226,17 +226,23 @@ function displayReadinessCards(issuesByVehicle, allRows) {
   
   // Extract all unique vehicle combinations from the spreadsheet
   if (allRows && allRows.length > 1) {
-    allRows.slice(1).forEach((row) => {
+    console.log('Processing', allRows.length - 1, 'data rows to find unique vehicles...');
+    allRows.slice(1).forEach((row, idx) => {
       const vehicleMake = (row[1] || '').trim();
       const vehicleModel = (row[2] || '').trim();
       const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' '); // Normalize spaces
       if (vehicleName) {
         allVehicles.add(vehicleName);
+        if (idx < 10) { // Log first 10 for debugging
+          console.log(`  Row ${idx + 2}: "${vehicleMake}" + "${vehicleModel}" = "${vehicleName}"`);
+        }
       }
     });
   }
   
-  console.log('All unique vehicles from spreadsheet:', Array.from(allVehicles).sort());
+  const sortedVehicles = Array.from(allVehicles).sort();
+  console.log('Total unique vehicles found:', sortedVehicles.length);
+  console.log('All unique vehicles from spreadsheet:', sortedVehicles);
 
   Array.from(allVehicles).sort().forEach(vehicleName => {
     const issues = issuesByVehicle[vehicleName] || [];
