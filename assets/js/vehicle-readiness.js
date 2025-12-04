@@ -288,6 +288,12 @@ function displayReadinessCards(issuesByVehicle) {
       <span class="status-badge status-${status}">${statusText}</span>
       ${unreviewedIssues.length > 0 ? `<div style="font-size: 0.9rem; color: #7f8c8d; margin-bottom: 8px;">${unreviewedIssues.length} open issue${unreviewedIssues.length !== 1 ? 's' : ''}</div>` : ''}
       ${issuesHtml}
+      ${accessToken ? `
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ecf0f1; display: flex; gap: 8px; flex-wrap: wrap;">
+          <button onclick="setVehicleStatus('${vehicleName}', 'ready')" style="flex: 1; min-width: 100px; padding: 8px 12px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">Mark Ready</button>
+          <button onclick="setVehicleStatus('${vehicleName}', 'not-ready')" style="flex: 1; min-width: 100px; padding: 8px 12px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">Mark Not Ready</button>
+        </div>
+      ` : ''}
     `;
     
     grid.appendChild(card);
@@ -410,6 +416,52 @@ async function deleteIssue(rowIndex) {
   } catch (error) {
     console.error('Error deleting issue:', error);
     alert('Failed to delete issue. Please try again.');
+  }
+}
+
+// Set vehicle status manually (creates a status override entry)
+async function setVehicleStatus(vehicleName, status) {
+  if (!accessToken) {
+    alert('Please sign in with Google to update vehicle status.');
+    handleSignIn();
+    return;
+  }
+  
+  const statusText = status === 'ready' ? 'Ready' : 'Not Ready';
+  if (!confirm(`Mark ${vehicleName} as ${statusText}?`)) {
+    return;
+  }
+  
+  try {
+    const timestamp = new Date().toLocaleString();
+    const priority = status === 'ready' ? 'Low' : 'High';
+    const mainIssue = status === 'ready' ? 'Vehicle Status: Ready for service' : 'Vehicle Status: Not ready for service';
+    
+    // Parse vehicle name
+    const parts = vehicleName.split(' ');
+    const make = parts.slice(0, -1).join(' ') || vehicleName;
+    const model = parts[parts.length - 1] || '';
+    
+    // Append new row with status update
+    const values = [
+      ['Status Override', make, model, 'Fleet', new Date().toLocaleDateString(), mainIssue, 'System', priority, 'Manual Override', timestamp, '', '', `Manual status set to: ${statusText}`]
+    ];
+    
+    await gapi.client.sheets.spreadsheets.values.append({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: 'Form Responses!A:M',
+      valueInputOption: 'USER_ENTERED',
+      resource: { values }
+    });
+    
+    console.log('Vehicle status updated successfully');
+    alert(`${vehicleName} marked as ${statusText}!`);
+    
+    // Reload the data
+    loadReadinessData();
+  } catch (error) {
+    console.error('Error updating vehicle status:', error);
+    alert('Failed to update vehicle status. Please try again.');
   }
 }
 
