@@ -436,8 +436,9 @@ function displayIssuesTable(rows) {
       <td style="padding: 10px; border: 1px solid #ecf0f1;">${notedIssues}</td>
       <td style="padding: 10px; border: 1px solid #ecf0f1; white-space: nowrap;">
         ${accessToken ? `
-          <button onclick="deleteIssue(${rows.length - index})" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">Delete</button>
-        ` : `<button onclick="alert('Please sign in to delete issues.'); handleSignIn();" style="padding: 5px 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Sign In</button>`}
+          <button onclick="editIssue(${rows.length - index})" style="padding: 5px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">Edit</button>
+          <button onclick="deleteIssue(${rows.length - index})" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Delete</button>
+        ` : `<button onclick="alert('Please sign in to edit or delete issues.'); handleSignIn();" style="padding: 5px 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Sign In</button>`}
       </td>
     `;
     
@@ -476,6 +477,145 @@ async function deleteIssue(rowIndex) {
   } catch (error) {
     console.error('Error deleting issue:', error);
     alert('Failed to delete issue. Please try again.');
+  }
+}
+
+// Edit an issue
+let editingRowData = null;
+
+async function editIssue(rowIndex) {
+  if (!accessToken) {
+    alert('Please sign in with Google to edit issues.');
+    handleSignIn();
+    return;
+  }
+  
+  try {
+    // Fetch the specific row data
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: `Form Responses!A${rowIndex}:M${rowIndex}`
+    });
+    
+    const rowData = response.result.values[0];
+    if (!rowData) {
+      alert('Could not load issue data.');
+      return;
+    }
+    
+    editingRowData = { rowIndex, data: rowData };
+    
+    // Populate edit modal
+    const vehicleMake = rowData[1] || '';
+    const vehicleModel = rowData[2] || '';
+    const vehicleName = `${vehicleMake} ${vehicleModel}`.trim();
+    
+    document.getElementById('editRowIndex').value = rowIndex;
+    document.getElementById('editVehicle').value = vehicleName;
+    document.getElementById('editDivision').value = rowData[3] || '';
+    document.getElementById('editDate').value = rowData[4] || '';
+    document.getElementById('editMainIssue').value = rowData[5] || '';
+    document.getElementById('editWrittenBy').value = rowData[6] || '';
+    document.getElementById('editPriority').value = rowData[7] || 'Low';
+    document.getElementById('editNotes').value = rowData[12] || '';
+    
+    // Populate vehicle dropdown
+    const response2 = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: 'Form Responses!A:M'
+    });
+    
+    const allRows = response2.result.values || [];
+    const vehicles = new Set();
+    allRows.slice(1).forEach(row => {
+      const make = (row[1] || '').trim();
+      const model = (row[2] || '').trim();
+      const name = `${make} ${model}`.trim().replace(/\s+/g, ' ');
+      if (name) vehicles.add(name);
+    });
+    
+    const vehicleSelect = document.getElementById('editVehicle');
+    vehicleSelect.innerHTML = '<option value="">Select Vehicle</option>';
+    Array.from(vehicles).sort().forEach(v => {
+      const option = document.createElement('option');
+      option.value = v;
+      option.textContent = v;
+      if (v === vehicleName) option.selected = true;
+      vehicleSelect.appendChild(option);
+    });
+    
+    // Show modal
+    document.getElementById('editIssueModal').style.display = 'flex';
+  } catch (error) {
+    console.error('Error loading issue for edit:', error);
+    alert('Failed to load issue data.');
+  }
+}
+
+function closeEditIssueModal() {
+  document.getElementById('editIssueModal').style.display = 'none';
+  editingRowData = null;
+}
+
+async function saveEditedIssue() {
+  if (!accessToken) {
+    alert('Please sign in with Google to save changes.');
+    handleSignIn();
+    return;
+  }
+  
+  const rowIndex = document.getElementById('editRowIndex').value;
+  const vehicleName = document.getElementById('editVehicle').value;
+  const division = document.getElementById('editDivision').value;
+  const date = document.getElementById('editDate').value;
+  const mainIssue = document.getElementById('editMainIssue').value;
+  const priority = document.getElementById('editPriority').value;
+  const writtenBy = document.getElementById('editWrittenBy').value;
+  const notes = document.getElementById('editNotes').value;
+  
+  if (!vehicleName || !mainIssue) {
+    alert('Please fill in vehicle and main issue fields.');
+    return;
+  }
+  
+  // Parse vehicle name into Make and Model
+  const parts = vehicleName.split(' ');
+  const make = parts[0] || '';
+  const model = parts.slice(1).join(' ') || '';
+  
+  try {
+    // Keep original data for columns we're not editing
+    const originalData = editingRowData.data;
+    
+    const values = [[
+      originalData[0] || '', // Question
+      make, // Vehicle Make
+      model, // Vehicle Model
+      division, // Division
+      date, // Date
+      mainIssue, // Main Issue
+      writtenBy, // Written Up By
+      priority, // Priority
+      originalData[8] || '', // Submitted By (keep original)
+      originalData[9] || '', // Timestamp (keep original)
+      originalData[10] || '', // Manual Status (keep original)
+      originalData[11] || '', // Date Reviewed (keep original)
+      notes // Noted Issues
+    ]];
+    
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: `Form Responses!A${rowIndex}:M${rowIndex}`,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: values }
+    });
+    
+    alert('Issue updated successfully!');
+    closeEditIssueModal();
+    loadReadinessData();
+  } catch (error) {
+    console.error('Error updating issue:', error);
+    alert('Failed to update issue. Please try again.');
   }
 }
 

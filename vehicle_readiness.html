@@ -204,6 +204,61 @@
     </div>
   </div>
 
+  <!-- Edit Issue Modal -->
+  <div id="editIssueModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+      <h3 style="margin-top: 0; color: #2c3e50;">Edit Issue</h3>
+      
+      <input type="hidden" id="editRowIndex">
+      
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Vehicle:</label>
+        <select id="editVehicle" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
+          <option value="">Select Vehicle</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Division:</label>
+        <input type="text" id="editDivision" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Date:</label>
+        <input type="date" id="editDate" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Main Issue:</label>
+        <input type="text" id="editMainIssue" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Priority:</label>
+        <select id="editPriority" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Written By:</label>
+        <input type="text" id="editWrittenBy" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Additional Notes:</label>
+        <textarea id="editNotes" rows="3" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;"></textarea>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button onclick="closeEditIssueModal()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
+        <button onclick="saveEditedIssue()" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <div class="summary-stats" id="summaryStats">
     <div class="stat-item stat-ready">
       <div class="stat-number" id="readyCount">0</div>
