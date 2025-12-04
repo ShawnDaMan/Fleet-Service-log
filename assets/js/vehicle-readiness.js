@@ -50,22 +50,9 @@ function gisLoaded() {
 
 function maybeEnableButtons() {
   if (gapiInited && gisInited) {
-    // Check for stored token
-    const storedToken = localStorage.getItem('google_access_token');
-    const tokenExpiry = localStorage.getItem('google_token_expiry');
-    
-    if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-      // Token is still valid, restore session
-      accessToken = storedToken;
-      gapi.client.setToken({access_token: accessToken});
-      updateSigninStatus(true);
-      loadReadinessData();
-    } else {
-      // Token expired or doesn't exist, clear storage and show sign-in
-      localStorage.removeItem('google_access_token');
-      localStorage.removeItem('google_token_expiry');
-      document.getElementById('authNotification').style.display = 'block';
-    }
+    // Load data immediately without requiring authentication
+    updateSigninStatus(true);
+    loadReadinessData();
   }
 }
 
@@ -73,27 +60,16 @@ function handleSignIn() {
   tokenClient.requestAccessToken({prompt: 'consent'});
 }
 
-function updateSigninStatus(signedIn) {
-  isSignedIn = signedIn;
-  if (signedIn) {
-    document.getElementById('authNotification').style.display = 'none';
-    document.getElementById('summaryStats').style.display = 'flex';
-    
-    // Start auto-refresh every 60 seconds
-    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-    autoRefreshInterval = setInterval(() => {
-      loadReadinessData();
-    }, 60000);
-  } else {
-    document.getElementById('authNotification').style.display = 'block';
-    document.getElementById('summaryStats').style.display = 'none';
-    
-    // Stop auto-refresh
-    if (autoRefreshInterval) {
-      clearInterval(autoRefreshInterval);
-      autoRefreshInterval = null;
-    }
-  }
+function updateSigninStatus(ready) {
+  // Always show content for public access
+  document.getElementById('summaryStats').style.display = 'flex';
+  document.getElementById('readinessGrid').style.display = 'grid';
+  
+  // Start auto-refresh every 60 seconds
+  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+  autoRefreshInterval = setInterval(() => {
+    loadReadinessData();
+  }, 60000);
 }
 
 // Load readiness data from Google Sheets
@@ -244,6 +220,12 @@ function displayReadinessCards(issuesByVehicle) {
 
 // Mark an issue as reviewed
 async function markAsReviewed(rowIndex) {
+  if (!accessToken) {
+    alert('Please sign in with Google to mark issues as reviewed.');
+    handleSignIn();
+    return;
+  }
+  
   if (!confirm('Mark this issue as reviewed?')) return;
   
   try {
@@ -275,8 +257,9 @@ async function markAsReviewed(rowIndex) {
 
 // Modal functions
 function showAddIssueModal() {
-  if (!isSignedIn) {
-    alert('Please sign in to report issues.');
+  if (!accessToken) {
+    alert('Please sign in with Google to report issues.');
+    handleSignIn();
     return;
   }
   document.getElementById('addIssueModal').style.display = 'flex';
@@ -327,6 +310,12 @@ document.getElementById('issueVehicleMake').addEventListener('change', function(
 });
 
 async function submitNewIssue() {
+  if (!accessToken) {
+    alert('Please sign in with Google to submit issues.');
+    handleSignIn();
+    return;
+  }
+  
   const make = document.getElementById('issueVehicleMake').value;
   const model = document.getElementById('issueVehicleModel').value;
   const issueType = document.getElementById('issueType').value;

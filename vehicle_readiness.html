@@ -141,13 +141,6 @@
 </head>
 <body>
   <h1>🚗 Vehicle Readiness Dashboard</h1>
-  
-  <div id="authNotification" style="background: #fff3cd; color: #856404; padding: 12px; text-align: center; margin: 20px auto; max-width: 90%; border-radius: 6px; display: none;">
-    <strong>Please sign in with Google to view vehicle readiness data.</strong>
-    <div style="margin-top: 10px;">
-      <button id="signInBtn" onclick="handleSignIn()" style="background: #4285f4; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600;">Sign In with Google</button>
-    </div>
-  </div>
 
   <div class="nav-links">
     <a href="index.html">← Service Log</a>
@@ -215,7 +208,7 @@
     </div>
   </div>
 
-  <div class="summary-stats" id="summaryStats" style="display: none;">
+  <div class="summary-stats" id="summaryStats">
     <div class="stat-item stat-ready">
       <div class="stat-number" id="readyCount">0</div>
       <div class="stat-label">Ready</div>
