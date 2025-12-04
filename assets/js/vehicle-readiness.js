@@ -75,15 +75,24 @@ function updateSigninStatus(ready) {
 // Load readiness data from Google Sheets
 async function loadReadinessData() {
   try {
+    console.log('Loading readiness data...');
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: READINESS_CONFIG.spreadsheetId,
       range: READINESS_CONFIG.range
     });
 
+    console.log('Response received:', response);
     const rows = response.result.values || [];
+    console.log('Rows found:', rows.length);
     
     if (rows.length === 0) {
       document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #7f8c8d;">No data found.</p>';
+      return;
+    }
+    
+    if (rows.length === 1) {
+      document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #7f8c8d;">No issues reported yet. All vehicles are ready!</p>';
+      updateSummaryCounts(8, 0, 0); // All 8 vehicles ready
       return;
     }
 
@@ -188,7 +197,7 @@ function displayReadinessCards(issuesByVehicle) {
               Date: ${issue.date || 'N/A'} |
               By: ${issue.writtenBy || 'Unknown'}
             </div>
-            ${isSignedIn ? `
+            ${accessToken ? `
               <button onclick="markAsReviewed(${issue.rowIndex})" 
                 style="margin-top: 8px; padding: 6px 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
                 ✓ Mark as Reviewed
@@ -216,6 +225,12 @@ function displayReadinessCards(issuesByVehicle) {
   document.getElementById('readyCount').textContent = readyCount;
   document.getElementById('warningCount').textContent = warningCount;
   document.getElementById('notReadyCount').textContent = notReadyCount;
+}
+
+function updateSummaryCounts(ready, warning, notReady) {
+  document.getElementById('readyCount').textContent = ready;
+  document.getElementById('warningCount').textContent = warning;
+  document.getElementById('notReadyCount').textContent = notReady;
 }
 
 // Mark an issue as reviewed
