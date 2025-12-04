@@ -402,9 +402,13 @@ async function submitNewIssue() {
 }
 
 // Initialize when scripts load
+window.gapiLoaded = gapiLoaded;
+window.gisLoaded = gisLoaded;
+
+// Fallback: Check if scripts are already loaded
 if (typeof gapi !== 'undefined') {
   gapiLoaded();
 }
-if (typeof google !== 'undefined') {
+if (typeof google !== 'undefined' && google.accounts) {
   gisLoaded();
 }
