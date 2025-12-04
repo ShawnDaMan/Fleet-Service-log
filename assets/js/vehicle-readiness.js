@@ -574,11 +574,11 @@ function showAddIssueModal() {
 function closeAddIssueModal() {
   document.getElementById('addIssueModal').style.display = 'none';
   // Reset form
-  document.getElementById('issueVehicleMake').value = '';
-  document.getElementById('issueVehicleModel').value = '';
+  document.getElementById('issueVehicle').value = '';
   document.getElementById('issueType').value = '';
   document.getElementById('otherIssueText').value = '';
   document.getElementById('issuePriority').value = 'Low';
+  document.getElementById('reporterName').value = '';
   document.getElementById('issueNotes').value = '';
   document.getElementById('otherIssueField').style.display = 'none';
 }
