@@ -259,7 +259,14 @@ function displayReadinessCards(issuesByVehicle, allRows) {
     
     // Debug logging for Corvette
     if (vehicleName.includes('Corvette')) {
-      console.log(`${vehicleName} - Unreviewed: ${unreviewedIssues.length}, High Priority: ${highPriorityIssues.length}, Manual Override: ${latestStatusOverride ? latestStatusOverride.manualStatus : 'none'}`);
+      console.log(`\n=== ${vehicleName} Debug ===`);
+      console.log('Total issues:', issues.length);
+      console.log('Unreviewed issues:', unreviewedIssues.length);
+      console.log('High priority unreviewed:', highPriorityIssues.length);
+      console.log('Manual override:', latestStatusOverride ? latestStatusOverride.manualStatus : 'none');
+      if (unreviewedIssues.length > 0) {
+        console.log('Unreviewed issue priorities:', unreviewedIssues.map(i => `"${i.priority}"`));
+      }
     }
     
     let status = 'ready';
