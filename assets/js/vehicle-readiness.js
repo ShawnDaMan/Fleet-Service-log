@@ -40,8 +40,7 @@ function gisLoaded() {
       localStorage.setItem('google_access_token', accessToken);
       localStorage.setItem('google_token_expiry', expiryTime);
       gapi.client.setToken({access_token: accessToken});
-      updateSigninStatus(true);
-      loadReadinessData();
+      loadReadinessData(); // Reload to show "Mark as Reviewed" buttons
     },
   });
   gisInited = true;
@@ -50,13 +49,27 @@ function gisLoaded() {
 
 function maybeEnableButtons() {
   if (gapiInited && gisInited) {
-    // Load data immediately without requiring authentication
+    // Check for stored token
+    const storedToken = localStorage.getItem('google_access_token');
+    const tokenExpiry = localStorage.getItem('google_token_expiry');
+    
+    if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+      // Token is still valid, restore session
+      accessToken = storedToken;
+      gapi.client.setToken({access_token: accessToken});
+    }
+    
+    // Load data immediately without requiring authentication for viewing
     updateSigninStatus(true);
     loadReadinessData();
   }
 }
 
 function handleSignIn() {
+  if (!tokenClient) {
+    alert('Authentication is still initializing. Please try again in a moment.');
+    return;
+  }
   tokenClient.requestAccessToken({prompt: 'consent'});
 }
 
