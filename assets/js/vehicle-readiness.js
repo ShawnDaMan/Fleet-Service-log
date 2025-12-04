@@ -17,15 +17,18 @@ let autoRefreshInterval = null;
 
 // Initialize Google API
 function gapiLoaded() {
+  console.log('gapiLoaded called');
   gapi.load('client', initializeGapiClient);
 }
 
 async function initializeGapiClient() {
+  console.log('initializeGapiClient called');
   await gapi.client.init({
     apiKey: READINESS_CONFIG.apiKey,
     discoveryDocs: READINESS_CONFIG.discoveryDocs,
   });
   gapiInited = true;
+  console.log('GAPI initialized successfully');
   
   // Check for stored token
   const storedToken = localStorage.getItem('google_access_token');
@@ -35,6 +38,7 @@ async function initializeGapiClient() {
     // Token is still valid, restore session
     accessToken = storedToken;
     gapi.client.setToken({access_token: accessToken});
+    console.log('Restored stored access token');
   }
   
   // Load data immediately for public viewing
@@ -43,6 +47,7 @@ async function initializeGapiClient() {
 }
 
 function gisLoaded() {
+  console.log('gisLoaded called');
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: READINESS_CONFIG.clientId,
     scope: READINESS_CONFIG.scope,
@@ -53,18 +58,34 @@ function gisLoaded() {
       localStorage.setItem('google_access_token', accessToken);
       localStorage.setItem('google_token_expiry', expiryTime);
       gapi.client.setToken({access_token: accessToken});
+      console.log('User authenticated successfully');
       loadReadinessData(); // Reload to show "Mark as Reviewed" buttons
     },
   });
   gisInited = true;
+  console.log('GIS initialized successfully');
 }
 
 function handleSignIn() {
+  console.log('handleSignIn called, tokenClient:', tokenClient);
   if (!tokenClient) {
-    alert('Authentication is still initializing. Please try again in a moment.');
-    return;
+    // Wait for GIS to load
+    const checkInterval = setInterval(() => {
+      if (tokenClient) {
+        clearInterval(checkInterval);
+        tokenClient.requestAccessToken({prompt: 'consent'});
+      }
+    }, 100);
+    // Timeout after 5 seconds
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      if (!tokenClient) {
+        alert('Authentication system failed to load. Please refresh the page.');
+      }
+    }, 5000);
+  } else {
+    tokenClient.requestAccessToken({prompt: 'consent'});
   }
-  tokenClient.requestAccessToken({prompt: 'consent'});
 }
 
 function updateSigninStatus(ready) {
@@ -83,6 +104,9 @@ function updateSigninStatus(ready) {
 async function loadReadinessData() {
   try {
     console.log('Loading readiness data...');
+    console.log('gapiInited:', gapiInited);
+    console.log('gapi.client:', typeof gapi !== 'undefined' ? gapi.client : 'undefined');
+    
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: READINESS_CONFIG.spreadsheetId,
       range: READINESS_CONFIG.range
