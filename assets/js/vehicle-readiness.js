@@ -324,6 +324,9 @@ function displayIssuesTable(rows) {
   // Skip header row and reverse to show newest first
   const dataRows = rows.slice(1).reverse();
   
+  console.log('accessToken for buttons:', accessToken);
+  console.log('Will show action buttons:', !!accessToken);
+  
   dataRows.forEach((row, index) => {
     const vehicleMake = row[1] || '';
     const vehicleModel = row[2] || '';
