@@ -46,8 +46,8 @@ function initGoogleAPI() {
                 return;
               }
               accessToken = response.access_token;
-              // Store token with expiry (Google tokens last 1 hour)
-              const expiryTime = Date.now() + (3600 * 1000);
+              // Store token with expiry (8 hours)
+              const expiryTime = Date.now() + (8 * 3600 * 1000);
               localStorage.setItem('google_access_token', accessToken);
               localStorage.setItem('google_token_expiry', expiryTime.toString());
               gapi.client.setToken({access_token: accessToken});

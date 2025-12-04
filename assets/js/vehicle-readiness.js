@@ -34,8 +34,8 @@ function gisLoaded() {
     scope: READINESS_CONFIG.scope,
     callback: (response) => {
       accessToken = response.access_token;
-      // Store token with expiry time (tokens typically last 1 hour)
-      const expiryTime = Date.now() + (3600 * 1000); // 1 hour from now
+      // Store token with expiry time (8 hours)
+      const expiryTime = Date.now() + (8 * 3600 * 1000);
       localStorage.setItem('google_access_token', accessToken);
       localStorage.setItem('google_token_expiry', expiryTime);
       gapi.client.setToken({access_token: accessToken});
