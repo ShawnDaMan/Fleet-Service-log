@@ -614,10 +614,11 @@ async function submitNewIssue() {
   const issueType = document.getElementById('issueType').value;
   const otherText = document.getElementById('otherIssueText').value;
   const priority = document.getElementById('issuePriority').value;
+  const reporterName = document.getElementById('reporterName').value.trim();
   const notes = document.getElementById('issueNotes').value;
   
-  if (!vehicleName || !issueType) {
-    alert('Please fill in all required fields.');
+  if (!vehicleName || !issueType || !reporterName) {
+    alert('Please fill in all required fields (Vehicle, Issue Type, and Your Name).');
     return;
   }
   
@@ -646,9 +647,9 @@ async function submitNewIssue() {
       '', // Division (empty for now)
       today, // Date
       mainIssue, // Main Issue
-      'Web Dashboard', // Written Up By
+      reporterName, // Written Up By
       priority, // Priority of Issue
-      'Dashboard User', // Submitted By
+      reporterName, // Submitted By
       new Date().toISOString(), // Timestamp
       '', // blank column
       '', // Date Reviewed (empty - new issue)
