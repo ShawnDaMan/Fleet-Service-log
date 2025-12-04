@@ -270,8 +270,21 @@ function displayReadinessCards(issuesByVehicle, allRows) {
     let statusText = 'Ready';
     let cardClass = 'vehicle-card';
     
-    // Manual override takes precedence
-    if (latestStatusOverride) {
+    // Priority order: Unreviewed issues always show first, then manual override only if no new issues
+    if (highPriorityIssues.length > 0) {
+      // High priority unreviewed issues = Not Ready (overrides any manual status)
+      status = 'not-ready';
+      statusText = 'Not Ready';
+      cardClass = 'vehicle-card not-ready';
+      notReadyCount++;
+    } else if (unreviewedIssues.length > 0) {
+      // Medium/Low priority unreviewed issues = Needs Attention (overrides any manual status)
+      status = 'warning';
+      statusText = 'Needs Attention';
+      cardClass = 'vehicle-card warning';
+      warningCount++;
+    } else if (latestStatusOverride) {
+      // Manual override only applies when there are NO unreviewed issues
       if (latestStatusOverride.manualStatus.toLowerCase().includes('not ready')) {
         status = 'not-ready';
         statusText = 'Not Ready (Manual)';
@@ -283,17 +296,8 @@ function displayReadinessCards(issuesByVehicle, allRows) {
         cardClass = 'vehicle-card';
         readyCount++;
       }
-    } else if (highPriorityIssues.length > 0) {
-      status = 'not-ready';
-      statusText = 'Not Ready';
-      cardClass = 'vehicle-card not-ready';
-      notReadyCount++;
-    } else if (unreviewedIssues.length > 0) {
-      status = 'warning';
-      statusText = 'Needs Attention';
-      cardClass = 'vehicle-card warning';
-      warningCount++;
     } else {
+      // No issues and no manual status = Ready
       readyCount++;
     }
 
