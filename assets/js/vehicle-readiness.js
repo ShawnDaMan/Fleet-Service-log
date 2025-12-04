@@ -5,7 +5,7 @@ const READINESS_CONFIG = {
   spreadsheetId: '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk',
   range: 'Form Responses!A:M',
   discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-  scope: 'https://www.googleapis.com/auth/spreadsheets.readonly'
+  scope: 'https://www.googleapis.com/auth/spreadsheets'
 };
 
 let tokenClient;
@@ -84,7 +84,7 @@ async function loadReadinessData() {
     // Written Up By, Priority of Issue, Submitted By, Timestamp, [blank], Date Reviewed, Noted Issues
     const issuesByVehicle = {};
     
-    rows.slice(1).forEach((row) => {
+    rows.slice(1).forEach((row, index) => {
       const vehicleMake = row[1] || '';
       const vehicleModel = row[2] || '';
       const vehicleName = `${vehicleMake} ${vehicleModel}`.trim();
@@ -92,6 +92,7 @@ async function loadReadinessData() {
       if (!vehicleName) return; // Skip empty rows
       
       const issue = {
+        rowIndex: index + 2, // +2 because: +1 for header, +1 for 1-based indexing
         question: row[0] || '',
         division: row[3] || '',
         date: row[4] || '',
@@ -179,6 +180,12 @@ function displayReadinessCards(issuesByVehicle) {
               Date: ${issue.date || 'N/A'} |
               By: ${issue.writtenBy || 'Unknown'}
             </div>
+            ${isSignedIn ? `
+              <button onclick="markAsReviewed(${issue.rowIndex})" 
+                style="margin-top: 8px; padding: 6px 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
+                ✓ Mark as Reviewed
+              </button>
+            ` : ''}
           </div>
         `;
       });
@@ -201,6 +208,37 @@ function displayReadinessCards(issuesByVehicle) {
   document.getElementById('readyCount').textContent = readyCount;
   document.getElementById('warningCount').textContent = warningCount;
   document.getElementById('notReadyCount').textContent = notReadyCount;
+}
+
+// Mark an issue as reviewed
+async function markAsReviewed(rowIndex) {
+  if (!confirm('Mark this issue as reviewed?')) return;
+  
+  try {
+    const today = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    
+    // Update the "Date Reviewed" column (column L, index 11)
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: `Form Responses!L${rowIndex}`,
+      valueInputOption: 'USER_ENTERED',
+      resource: {
+        values: [[today]]
+      }
+    });
+    
+    console.log('Issue marked as reviewed successfully');
+    
+    // Reload the data
+    loadReadinessData();
+  } catch (error) {
+    console.error('Error marking issue as reviewed:', error);
+    alert('Failed to update issue. Please try again.');
+  }
 }
 
 // Initialize when scripts load
