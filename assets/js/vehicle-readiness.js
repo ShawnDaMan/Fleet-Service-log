@@ -438,7 +438,7 @@ async function deleteIssue(rowIndex) {
   }
 }
 
-// Set vehicle status manually (stores in column K of a dedicated status row)
+// Set vehicle status manually (updates column K for the vehicle's most recent entry)
 async function setVehicleStatus(vehicleName, status) {
   if (!accessToken) {
     alert('Please sign in with Google to update vehicle status.');
@@ -452,25 +452,41 @@ async function setVehicleStatus(vehicleName, status) {
   }
   
   try {
-    const timestamp = new Date().toLocaleString();
-    
-    // Parse vehicle name
-    const parts = vehicleName.split(' ');
-    const make = parts.slice(0, -1).join(' ') || vehicleName;
-    const model = parts[parts.length - 1] || '';
-    
-    // Create a status override entry with column K set to the status
-    const values = [
-      ['Vehicle Status Override', make, model, 'Fleet', new Date().toLocaleDateString(), 
-       `Manual status override: ${statusText}`, 'System', 'Manual', 'System', timestamp, 
-       statusText, '', `Manual override set by user`]
-    ];
-    
-    await gapi.client.sheets.spreadsheets.values.append({
+    // Get current data to find the row for this vehicle
+    const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: READINESS_CONFIG.spreadsheetId,
-      range: 'Form Responses!A:M',
+      range: READINESS_CONFIG.range
+    });
+    
+    const rows = response.result.values || [];
+    
+    // Find the most recent row for this vehicle (search from bottom up)
+    let targetRowIndex = -1;
+    for (let i = rows.length - 1; i > 0; i--) {
+      const row = rows[i];
+      const vehicleMake = row[1] || '';
+      const vehicleModel = row[2] || '';
+      const rowVehicleName = `${vehicleMake} ${vehicleModel}`.trim();
+      
+      if (rowVehicleName === vehicleName) {
+        targetRowIndex = i + 1; // +1 for 1-based indexing
+        break;
+      }
+    }
+    
+    if (targetRowIndex === -1) {
+      alert(`No entries found for ${vehicleName}. Please report an issue first.`);
+      return;
+    }
+    
+    // Update column K (index 10, which is column K in A1 notation)
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: `Form Responses!K${targetRowIndex}`,
       valueInputOption: 'USER_ENTERED',
-      resource: { values }
+      resource: {
+        values: [[statusText]]
+      }
     });
     
     console.log('Vehicle status updated successfully');
