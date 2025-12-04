@@ -270,21 +270,26 @@ function displayReadinessCards(issuesByVehicle, allRows) {
     let statusText = 'Ready';
     let cardClass = 'vehicle-card';
     
-    // Priority order: Unreviewed issues always show first, then manual override only if no new issues
+    // Filter for medium/high priority unreviewed issues (exclude low priority)
+    const mediumHighPriorityIssues = unreviewedIssues.filter(issue => 
+      !issue.priority.includes('low')
+    );
+    
+    // Priority order: High/Medium unreviewed issues override manual status, Low priority doesn't affect status
     if (highPriorityIssues.length > 0) {
       // High priority unreviewed issues = Not Ready (overrides any manual status)
       status = 'not-ready';
       statusText = 'Not Ready';
       cardClass = 'vehicle-card not-ready';
       notReadyCount++;
-    } else if (unreviewedIssues.length > 0) {
-      // Medium/Low priority unreviewed issues = Needs Attention (overrides any manual status)
+    } else if (mediumHighPriorityIssues.length > 0) {
+      // Medium priority unreviewed issues = Needs Attention (overrides any manual status)
       status = 'warning';
       statusText = 'Needs Attention';
       cardClass = 'vehicle-card warning';
       warningCount++;
     } else if (latestStatusOverride) {
-      // Manual override only applies when there are NO unreviewed issues
+      // Manual override applies when there are NO medium/high unreviewed issues (low priority issues ignored)
       if (latestStatusOverride.manualStatus.toLowerCase().includes('not ready')) {
         status = 'not-ready';
         statusText = 'Not Ready (Manual)';
@@ -297,7 +302,7 @@ function displayReadinessCards(issuesByVehicle, allRows) {
         readyCount++;
       }
     } else {
-      // No issues and no manual status = Ready
+      // No medium/high issues and no manual status = Ready
       readyCount++;
     }
 
