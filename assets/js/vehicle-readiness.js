@@ -41,9 +41,17 @@ async function initializeGapiClient() {
     console.log('Restored stored access token');
   }
   
-  // Load data immediately for public viewing
-  updateSigninStatus(true);
-  loadReadinessData();
+  // Wait for DOM to be ready before loading data
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      updateSigninStatus(true);
+      loadReadinessData();
+    });
+  } else {
+    // DOM is already ready
+    updateSigninStatus(true);
+    loadReadinessData();
+  }
 }
 
 function gisLoaded() {
