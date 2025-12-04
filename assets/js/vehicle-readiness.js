@@ -257,6 +257,11 @@ function displayReadinessCards(issuesByVehicle, allRows) {
       .filter(issue => issue.manualStatus) // Column K has a value
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
     
+    // Debug logging for Corvette
+    if (vehicleName.includes('Corvette')) {
+      console.log(`${vehicleName} - Unreviewed: ${unreviewedIssues.length}, High Priority: ${highPriorityIssues.length}, Manual Override: ${latestStatusOverride ? latestStatusOverride.manualStatus : 'none'}`);
+    }
+    
     let status = 'ready';
     let statusText = 'Ready';
     let cardClass = 'vehicle-card';
