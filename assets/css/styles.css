@@ -58,6 +58,15 @@ table {
   width: 95%; margin: 30px auto 0 auto; border-collapse: collapse; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(44,62,80,0.08); overflow: hidden;
   font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
 }
+/* Mobile responsive table */
+@media (max-width: 768px) {
+  table {
+    font-size: 0.85rem;
+  }
+  th, td {
+    padding: 8px 6px;
+  }
+}
 th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #e1e7ed; }
 th {
   background: #eaf1f7; color: #2c3e50; font-weight: 600; letter-spacing: 0.5px;

@@ -15,6 +15,7 @@ let gapiInitialized = false;
 let isSignedIn = false;
 let accessToken = null;
 let tokenClient = null;
+let autoRefreshInterval = null;
 
 // Initialize Google API with new GIS
 function initGoogleAPI() {
@@ -88,20 +89,35 @@ function updateSigninStatus(signedIn) {
   const signOutBtn = document.getElementById('signOutBtn');
   const serviceForm = document.getElementById('serviceForm');
   const actionsDiv = document.querySelector('.actions');
+  const summaryCards = document.getElementById('summaryCards');
   
   if (signedIn) {
     if (signInBtn) signInBtn.style.display = 'none';
     if (signOutBtn) signOutBtn.style.display = 'inline-block';
     if (serviceForm) serviceForm.style.display = 'block';
     if (actionsDiv) actionsDiv.style.display = 'block';
+    if (summaryCards) summaryCards.style.display = 'grid';
     
     // Load data after sign-in
     loadTableFromGoogleSheets();
+    
+    // Start auto-refresh every 60 seconds
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => {
+      loadTableFromGoogleSheets();
+    }, 60000);
   } else {
     if (signInBtn) signInBtn.style.display = 'inline-block';
     if (signOutBtn) signOutBtn.style.display = 'none';
     if (serviceForm) serviceForm.style.display = 'none';
     if (actionsDiv) actionsDiv.style.display = 'none';
+    if (summaryCards) summaryCards.style.display = 'none';
+    
+    // Stop auto-refresh
+    if (autoRefreshInterval) {
+      clearInterval(autoRefreshInterval);
+      autoRefreshInterval = null;
+    }
     
     // Try to load data in read-only mode
     loadTableFromGoogleSheets().catch(() => {
@@ -414,6 +430,45 @@ function updateTotals() {
   });
 }
 
+function updateSummaryCards() {
+  const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+  
+  // Count unique vehicles and total records
+  const vehicles = new Set();
+  let totalCost = 0;
+  let monthlyCount = 0;
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  for (let i = 0; i < table.rows.length; i++) {
+    const row = table.rows[i];
+    if (row.classList.contains('grand-total-row') || row.classList.contains('total-row')) continue;
+    
+    const vehicleId = row.cells[1].innerText;
+    const cost = parseCost(row.cells[4].innerText);
+    const dateStr = row.cells[3].innerText;
+    
+    vehicles.add(vehicleId);
+    totalCost += cost;
+    
+    // Check if record is from current month
+    if (dateStr) {
+      const recordDate = new Date(dateStr);
+      if (recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear) {
+        monthlyCount += cost;
+      }
+    }
+  }
+  
+  // Update card values
+  document.getElementById('totalVehicles').textContent = vehicles.size || 8;
+  document.getElementById('totalRecords').textContent = table.rows.length - document.querySelectorAll('.grand-total-row, .total-row').length;
+  document.getElementById('monthlyCost').textContent = formatCost(monthlyCount);
+  
+  // Fetch readiness data if available (placeholder for now)
+  document.getElementById('vehiclesReady').textContent = '—';
+}
+
 // ========================================
 // SECTION 7: GOOGLE SHEETS STORAGE
 // ========================================
@@ -499,6 +554,7 @@ async function loadTableFromGoogleSheets() {
     }
     
     updateTotals();
+    updateSummaryCards();
     console.log('Data loaded from Google Sheets successfully');
   } catch (error) {
     console.error('Error loading from Google Sheets:', error);

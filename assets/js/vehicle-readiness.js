@@ -13,6 +13,7 @@ let accessToken = null;
 let gapiInited = false;
 let gisInited = false;
 let isSignedIn = false;
+let autoRefreshInterval = null;
 
 // Initialize Google API
 function gapiLoaded() {
@@ -77,9 +78,21 @@ function updateSigninStatus(signedIn) {
   if (signedIn) {
     document.getElementById('authNotification').style.display = 'none';
     document.getElementById('summaryStats').style.display = 'flex';
+    
+    // Start auto-refresh every 60 seconds
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => {
+      loadReadinessData();
+    }, 60000);
   } else {
     document.getElementById('authNotification').style.display = 'block';
     document.getElementById('summaryStats').style.display = 'none';
+    
+    // Stop auto-refresh
+    if (autoRefreshInterval) {
+      clearInterval(autoRefreshInterval);
+      autoRefreshInterval = null;
+    }
   }
 }
 
