@@ -282,12 +282,14 @@ function displayReadinessCards(issuesByVehicle, allRows) {
       statusText = 'Not Ready';
       cardClass = 'vehicle-card not-ready';
       notReadyCount++;
+      console.log('  → Status: NOT READY (high priority issues)');
     } else if (mediumHighPriorityIssues.length > 0) {
       // Medium priority unreviewed issues = Needs Attention (overrides any manual status)
       status = 'warning';
       statusText = 'Needs Attention';
       cardClass = 'vehicle-card warning';
       warningCount++;
+      console.log('  → Status: NEEDS ATTENTION (medium priority issues)');
     } else if (latestStatusOverride) {
       // Manual override applies when there are NO medium/high unreviewed issues (low priority issues ignored)
       if (latestStatusOverride.manualStatus.toLowerCase().includes('not ready')) {
@@ -295,15 +297,18 @@ function displayReadinessCards(issuesByVehicle, allRows) {
         statusText = 'Not Ready (Manual)';
         cardClass = 'vehicle-card not-ready';
         notReadyCount++;
+        console.log('  → Status: NOT READY (manual override)');
       } else {
         status = 'ready';
         statusText = 'Ready (Manual)';
         cardClass = 'vehicle-card';
         readyCount++;
+        console.log('  → Status: READY (manual override)');
       }
     } else {
       // No medium/high issues and no manual status = Ready
       readyCount++;
+      console.log('  → Status: READY (no issues)');
     }
 
     const card = document.createElement('div');
