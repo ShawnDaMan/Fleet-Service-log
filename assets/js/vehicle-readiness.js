@@ -26,7 +26,20 @@ async function initializeGapiClient() {
     discoveryDocs: READINESS_CONFIG.discoveryDocs,
   });
   gapiInited = true;
-  maybeEnableButtons();
+  
+  // Check for stored token
+  const storedToken = localStorage.getItem('google_access_token');
+  const tokenExpiry = localStorage.getItem('google_token_expiry');
+  
+  if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+    // Token is still valid, restore session
+    accessToken = storedToken;
+    gapi.client.setToken({access_token: accessToken});
+  }
+  
+  // Load data immediately for public viewing
+  updateSigninStatus(true);
+  loadReadinessData();
 }
 
 function gisLoaded() {
@@ -44,25 +57,6 @@ function gisLoaded() {
     },
   });
   gisInited = true;
-  maybeEnableButtons();
-}
-
-function maybeEnableButtons() {
-  if (gapiInited && gisInited) {
-    // Check for stored token
-    const storedToken = localStorage.getItem('google_access_token');
-    const tokenExpiry = localStorage.getItem('google_token_expiry');
-    
-    if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-      // Token is still valid, restore session
-      accessToken = storedToken;
-      gapi.client.setToken({access_token: accessToken});
-    }
-    
-    // Load data immediately without requiring authentication for viewing
-    updateSigninStatus(true);
-    loadReadinessData();
-  }
 }
 
 function handleSignIn() {
