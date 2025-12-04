@@ -92,16 +92,6 @@
       <button type="submit">Add Service</button>
     </div>
   </form>
-  <div class="actions" style="display: none;">
-    <button id="exportCsvBtn">Export to CSV</button>
-    <input type="file" id="importCsvInput" accept=".csv" style="margin-left:16px;" />
-    <button id="importCsvBtn">Import CSV</button>
-    <div style="margin-top:12px; color:#34495e; font-size:0.98rem; text-align:left; font-weight:bold;">
-      <span style="font-weight:bold;">Note: After exporting, move the downloaded CSV file to <br>
-      <span style="font-family:monospace; font-weight:bold;">C:\Users\shawn\OneDrive\Documentos\Fleet Service Log</span>
-      for safekeeping or future import.</span>
-    </div>
-  </div>
 
   <div style="background: #fff; max-width: 90%; margin: 20px auto; padding: 20px 24px; border-radius: 12px; box-shadow: 0 2px 12px rgba(44,62,80,0.08);">
     <h3 style="margin-top: 0; color: #2c3e50; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">Filter Entries</h3>
@@ -125,6 +115,17 @@
     </div>
   </div>
 
+  <h2>Totals by Vehicle</h2>
+  <table id="totalsTable">
+    <thead>
+      <tr>
+        <th>Vehicle ID</th>
+        <th>Total Cost (USD)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
   <table id="serviceTable">
     <thead>
       <tr>
@@ -140,9 +141,18 @@
     </thead>
     <tbody></tbody>
   </table>
-  <h2>Totals by Vehicle</h2>
-  <table id="totalsTable">
-    <thead>
+
+  <div class="actions" style="display: none;">
+    <button id="exportCsvBtn">Export to CSV</button>
+    <input type="file" id="importCsvInput" accept=".csv" style="margin-left:16px;" />
+    <button id="importCsvBtn">Import CSV</button>
+    <div style="margin-top:12px; color:#34495e; font-size:0.98rem; text-align:left; font-weight:bold;">
+      <span style="font-weight:bold;">Note: After exporting, move the downloaded CSV file to <br>
+      <span style="font-family:monospace; font-weight:bold;">C:\Users\shawn\OneDrive\Documentos\Fleet Service Log</span>
+      for safekeeping or future import.</span>
+    </div>
+  </div>
+
       <tr>
         <th>Vehicle ID</th>
         <th>Total Cost (USD)</th>
