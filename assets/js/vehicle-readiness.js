@@ -116,7 +116,14 @@ function updateSigninStatus(ready) {
 }
 
 // Load readiness data from Google Sheets
+let isLoading = false;
 async function loadReadinessData() {
+  if (isLoading) {
+    console.log('Already loading, skipping...');
+    return;
+  }
+  
+  isLoading = true;
   try {
     console.log('Loading readiness data...');
     console.log('gapiInited:', gapiInited);
@@ -185,7 +192,10 @@ async function loadReadinessData() {
     console.log('Display functions completed');
   } catch (error) {
     console.error('Error loading readiness data:', error);
+    console.error('Error stack:', error.stack);
     document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #e74c3c;">Error loading data. Please try again.</p>';
+  } finally {
+    isLoading = false;
   }
 }
 
