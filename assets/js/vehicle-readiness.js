@@ -157,9 +157,9 @@ async function loadReadinessData() {
     const issuesByVehicle = {};
     
     rows.slice(1).forEach((row, index) => {
-      const vehicleMake = row[1] || '';
-      const vehicleModel = row[2] || '';
-      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim();
+      const vehicleMake = (row[1] || '').trim();
+      const vehicleModel = (row[2] || '').trim();
+      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' '); // Normalize spaces
       
       if (!vehicleName) return; // Skip empty rows
       
@@ -227,9 +227,9 @@ function displayReadinessCards(issuesByVehicle, allRows) {
   // Extract all unique vehicle combinations from the spreadsheet
   if (allRows && allRows.length > 1) {
     allRows.slice(1).forEach((row) => {
-      const vehicleMake = row[1] || '';
-      const vehicleModel = row[2] || '';
-      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim();
+      const vehicleMake = (row[1] || '').trim();
+      const vehicleModel = (row[2] || '').trim();
+      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' '); // Normalize spaces
       if (vehicleName) {
         allVehicles.add(vehicleName);
       }
