@@ -243,6 +243,9 @@ function displayReadinessCards(issuesByVehicle, allRows) {
   const sortedVehicles = Array.from(allVehicles).sort();
   console.log('Total unique vehicles found:', sortedVehicles.length);
   console.log('All unique vehicles from spreadsheet:', sortedVehicles);
+  
+  // Populate the Report Issue form dropdown with these vehicles
+  populateVehicleDropdown(sortedVehicles);
 
   Array.from(allVehicles).sort().forEach(vehicleName => {
     const issues = issuesByVehicle[vehicleName] || [];
@@ -586,31 +589,19 @@ function toggleOtherField() {
   otherField.style.display = issueType === 'Other' ? 'block' : 'none';
 }
 
-// Vehicle model mapping
-const vehicleModels = {
-  '2023 Chevrolet': ['Z06', 'Z51'],
-  '2023 Ford': ['GT 500'],
-  '1972 Chevrolet': ['el Camino'],
-  '1969 Chevrolet': ['Camaro'],
-  '1968 Plymouth': ['roadrunner'],
-  '2015 Dodge': ['Challenger'],
-  '2017 Dodge': ['Charger']
-};
-
-document.getElementById('issueVehicleMake').addEventListener('change', function() {
-  const make = this.value;
-  const modelSelect = document.getElementById('issueVehicleModel');
-  modelSelect.innerHTML = '<option value="">Select Vehicle Model</option>';
+// Populate vehicle dropdown with actual vehicles from the dashboard
+function populateVehicleDropdown(vehicles) {
+  const vehicleSelect = document.getElementById('issueVehicle');
+  if (!vehicleSelect) return;
   
-  if (make && vehicleModels[make]) {
-    vehicleModels[make].forEach(model => {
-      const option = document.createElement('option');
-      option.value = model;
-      option.textContent = model;
-      modelSelect.appendChild(option);
-    });
-  }
-});
+  vehicleSelect.innerHTML = '<option value="">Select Vehicle</option>';
+  vehicles.forEach(vehicleName => {
+    const option = document.createElement('option');
+    option.value = vehicleName;
+    option.textContent = vehicleName;
+    vehicleSelect.appendChild(option);
+  });
+}
 
 async function submitNewIssue() {
   if (!accessToken) {
@@ -619,17 +610,21 @@ async function submitNewIssue() {
     return;
   }
   
-  const make = document.getElementById('issueVehicleMake').value;
-  const model = document.getElementById('issueVehicleModel').value;
+  const vehicleName = document.getElementById('issueVehicle').value;
   const issueType = document.getElementById('issueType').value;
   const otherText = document.getElementById('otherIssueText').value;
   const priority = document.getElementById('issuePriority').value;
   const notes = document.getElementById('issueNotes').value;
   
-  if (!make || !model || !issueType) {
+  if (!vehicleName || !issueType) {
     alert('Please fill in all required fields.');
     return;
   }
+  
+  // Parse vehicle name into Make and Model (e.g., "Chevrolet Camaro" -> Make: "Chevrolet", Model: "Camaro")
+  const parts = vehicleName.split(' ');
+  const make = parts[0] || '';
+  const model = parts.slice(1).join(' ') || '';
   
   if (issueType === 'Other' && !otherText) {
     alert('Please describe the issue.');
