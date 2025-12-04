@@ -175,10 +175,17 @@ async function loadReadinessData() {
 }
 
 function displayReadinessCards(issuesByVehicle) {
-  console.log('displayReadinessCards called with:', issuesByVehicle);
-  const grid = document.getElementById('readinessGrid');
-  console.log('Grid element:', grid);
-  grid.innerHTML = '';
+  try {
+    console.log('displayReadinessCards called with:', issuesByVehicle);
+    const grid = document.getElementById('readinessGrid');
+    console.log('Grid element:', grid);
+    
+    if (!grid) {
+      console.error('readinessGrid element not found!');
+      return;
+    }
+    
+    grid.innerHTML = '';
   
   let readyCount = 0;
   let warningCount = 0;
@@ -265,13 +272,24 @@ function displayReadinessCards(issuesByVehicle) {
   document.getElementById('readyCount').textContent = readyCount;
   document.getElementById('warningCount').textContent = warningCount;
   document.getElementById('notReadyCount').textContent = notReadyCount;
+  console.log('displayReadinessCards completed successfully');
+  } catch (error) {
+    console.error('Error in displayReadinessCards:', error);
+  }
 }
 
 function displayIssuesTable(rows) {
-  console.log('displayIssuesTable called with rows:', rows.length);
-  const tbody = document.getElementById('issuesTableBody');
-  console.log('Table body element:', tbody);
-  tbody.innerHTML = '';
+  try {
+    console.log('displayIssuesTable called with rows:', rows.length);
+    const tbody = document.getElementById('issuesTableBody');
+    console.log('Table body element:', tbody);
+    
+    if (!tbody) {
+      console.error('issuesTableBody element not found!');
+      return;
+    }
+    
+    tbody.innerHTML = '';
   
   if (rows.length <= 1) {
     tbody.innerHTML = '<tr><td colspan="9" style="padding: 20px; text-align: center; color: #7f8c8d;">No issues reported yet.</td></tr>';
@@ -326,6 +344,10 @@ function displayIssuesTable(rows) {
     
     tbody.appendChild(tr);
   });
+  console.log('displayIssuesTable completed successfully');
+  } catch (error) {
+    console.error('Error in displayIssuesTable:', error);
+  }
 }
 
 function updateSummaryCounts(ready, warning, notReady) {
@@ -493,10 +515,19 @@ async function submitNewIssue() {
 window.gapiLoaded = gapiLoaded;
 window.gisLoaded = gisLoaded;
 
-// Fallback: Check if scripts are already loaded
-if (typeof gapi !== 'undefined') {
-  gapiLoaded();
-}
-if (typeof google !== 'undefined' && google.accounts) {
-  gisLoaded();
-}
+// Poll for script availability
+const checkScriptsLoaded = setInterval(() => {
+  if (typeof gapi !== 'undefined' && !gapiInited) {
+    console.log('GAPI detected, calling gapiLoaded()');
+    clearInterval(checkScriptsLoaded);
+    gapiLoaded();
+  }
+  if (typeof google !== 'undefined' && google.accounts && !gisInited) {
+    console.log('GIS detected, calling gisLoaded()');
+    gisLoaded();
+  }
+  // Stop checking after both are loaded
+  if (gapiInited && gisInited) {
+    clearInterval(checkScriptsLoaded);
+  }
+}, 100);
