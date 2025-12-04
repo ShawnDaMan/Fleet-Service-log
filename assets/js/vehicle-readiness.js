@@ -23,6 +23,7 @@ function gapiLoaded() {
 
 async function initializeGapiClient() {
   console.log('initializeGapiClient called');
+  console.log('document.readyState:', document.readyState);
   await gapi.client.init({
     apiKey: READINESS_CONFIG.apiKey,
     discoveryDocs: READINESS_CONFIG.discoveryDocs,
@@ -41,17 +42,23 @@ async function initializeGapiClient() {
     console.log('Restored stored access token');
   }
   
-  // Wait for DOM to be ready before loading data
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+  // Check if elements exist, if not wait a bit
+  const checkAndLoad = () => {
+    const grid = document.getElementById('readinessGrid');
+    const tbody = document.getElementById('issuesTableBody');
+    console.log('Checking for elements - grid:', grid, 'tbody:', tbody);
+    
+    if (grid && tbody) {
+      console.log('Elements found, loading data');
       updateSigninStatus(true);
       loadReadinessData();
-    });
-  } else {
-    // DOM is already ready
-    updateSigninStatus(true);
-    loadReadinessData();
-  }
+    } else {
+      console.log('Elements not found yet, waiting...');
+      setTimeout(checkAndLoad, 100);
+    }
+  };
+  
+  checkAndLoad();
 }
 
 function gisLoaded() {
