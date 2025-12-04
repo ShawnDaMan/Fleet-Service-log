@@ -163,6 +163,10 @@ async function loadReadinessData() {
       
       if (!vehicleName) return; // Skip empty rows
       
+      if (index < 5) { // Log first 5 vehicles for debugging
+        console.log(`Row ${index + 2}: Make="${vehicleMake}" Model="${vehicleModel}" Combined="${vehicleName}"`);
+      }
+      
       const issue = {
         rowIndex: index + 2, // +2 because: +1 for header, +1 for 1-based indexing
         question: row[0] || '',
@@ -217,8 +221,16 @@ function displayReadinessCards(issuesByVehicle) {
   let warningCount = 0;
   let notReadyCount = 0;
 
-  // Get all unique vehicle names from both sheets
-  const allVehicles = [
+  // Get all unique vehicle names from the spreadsheet data
+  const allVehicles = new Set();
+  
+  // Add vehicles from issues
+  Object.keys(issuesByVehicle).forEach(vehicleName => {
+    if (vehicleName) allVehicles.add(vehicleName);
+  });
+  
+  // Add default fleet vehicles if not present
+  const defaultVehicles = [
     '2023 Chevrolet Z06',
     '2023 Chevrolet Z51',
     '2023 Ford GT 500',
@@ -228,8 +240,12 @@ function displayReadinessCards(issuesByVehicle) {
     '2015 Dodge Challenger',
     '2017 Dodge Charger'
   ];
+  
+  defaultVehicles.forEach(v => allVehicles.add(v));
+  
+  console.log('All vehicles to display:', Array.from(allVehicles));
 
-  allVehicles.forEach(vehicleName => {
+  Array.from(allVehicles).sort().forEach(vehicleName => {
     const issues = issuesByVehicle[vehicleName] || [];
     const unreviewedIssues = issues.filter(issue => !issue.dateReviewed);
     const highPriorityIssues = unreviewedIssues.filter(issue => issue.priority.includes('high'));
