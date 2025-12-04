@@ -191,7 +191,7 @@ async function loadReadinessData() {
 
     console.log('Issues by vehicle:', issuesByVehicle);
     console.log('Calling displayReadinessCards...');
-    displayReadinessCards(issuesByVehicle);
+    displayReadinessCards(issuesByVehicle, rows);
     console.log('Calling displayIssuesTable...');
     displayIssuesTable(rows);
     console.log('Display functions completed');
@@ -204,7 +204,7 @@ async function loadReadinessData() {
   }
 }
 
-function displayReadinessCards(issuesByVehicle) {
+function displayReadinessCards(issuesByVehicle, allRows) {
   try {
     console.log('displayReadinessCards called with:', issuesByVehicle);
     const grid = document.getElementById('readinessGrid');
@@ -221,29 +221,22 @@ function displayReadinessCards(issuesByVehicle) {
   let warningCount = 0;
   let notReadyCount = 0;
 
-  // Get all unique vehicle names from the spreadsheet data
+  // Get all unique vehicle names from the spreadsheet (Make + Model from all rows)
   const allVehicles = new Set();
   
-  // Add vehicles from issues
-  Object.keys(issuesByVehicle).forEach(vehicleName => {
-    if (vehicleName) allVehicles.add(vehicleName);
-  });
+  // Extract all unique vehicle combinations from the spreadsheet
+  if (allRows && allRows.length > 1) {
+    allRows.slice(1).forEach((row) => {
+      const vehicleMake = row[1] || '';
+      const vehicleModel = row[2] || '';
+      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim();
+      if (vehicleName) {
+        allVehicles.add(vehicleName);
+      }
+    });
+  }
   
-  // Add default fleet vehicles if not present
-  const defaultVehicles = [
-    '2023 Chevrolet Z06',
-    '2023 Chevrolet Z51',
-    '2023 Ford GT 500',
-    '1972 Chevrolet el Camino',
-    '1969 Chevrolet Camaro',
-    '1968 Plymouth roadrunner',
-    '2015 Dodge Challenger',
-    '2017 Dodge Charger'
-  ];
-  
-  defaultVehicles.forEach(v => allVehicles.add(v));
-  
-  console.log('All vehicles to display:', Array.from(allVehicles));
+  console.log('All unique vehicles from spreadsheet:', Array.from(allVehicles).sort());
 
   Array.from(allVehicles).sort().forEach(vehicleName => {
     const issues = issuesByVehicle[vehicleName] || [];
