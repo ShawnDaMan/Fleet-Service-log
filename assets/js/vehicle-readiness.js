@@ -161,6 +161,7 @@ async function loadReadinessData() {
     });
 
     displayReadinessCards(issuesByVehicle);
+    displayIssuesTable(rows);
   } catch (error) {
     console.error('Error loading readiness data:', error);
     document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #e74c3c;">Error loading data. Please try again.</p>';
@@ -256,6 +257,65 @@ function displayReadinessCards(issuesByVehicle) {
   document.getElementById('readyCount').textContent = readyCount;
   document.getElementById('warningCount').textContent = warningCount;
   document.getElementById('notReadyCount').textContent = notReadyCount;
+}
+
+function displayIssuesTable(rows) {
+  const tbody = document.getElementById('issuesTableBody');
+  tbody.innerHTML = '';
+  
+  if (rows.length <= 1) {
+    tbody.innerHTML = '<tr><td colspan="9" style="padding: 20px; text-align: center; color: #7f8c8d;">No issues reported yet.</td></tr>';
+    return;
+  }
+  
+  // Skip header row and reverse to show newest first
+  const dataRows = rows.slice(1).reverse();
+  
+  dataRows.forEach((row, index) => {
+    const vehicleMake = row[1] || '';
+    const vehicleModel = row[2] || '';
+    const vehicleName = `${vehicleMake} ${vehicleModel}`.trim();
+    const division = row[3] || '';
+    const date = row[4] || '';
+    const mainIssue = row[5] || '';
+    const writtenBy = row[6] || '';
+    const priority = row[7] || '';
+    const submittedBy = row[8] || '';
+    const dateReviewed = row[11] || '';
+    const notedIssues = row[12] || '';
+    
+    const tr = document.createElement('tr');
+    tr.style.background = index % 2 === 0 ? '#f8f9fa' : '#fff';
+    
+    // Color code by priority
+    let priorityColor = '#95a5a6';
+    if (priority.toLowerCase().includes('high')) {
+      priorityColor = '#e74c3c';
+    } else if (priority.toLowerCase().includes('medium')) {
+      priorityColor = '#f39c12';
+    } else if (priority.toLowerCase().includes('low')) {
+      priorityColor = '#3498db';
+    }
+    
+    // Highlight unreviewed issues
+    if (!dateReviewed) {
+      tr.style.borderLeft = `4px solid ${priorityColor}`;
+    }
+    
+    tr.innerHTML = `
+      <td style="padding: 10px; border: 1px solid #ecf0f1;">${date}</td>
+      <td style="padding: 10px; border: 1px solid #ecf0f1; font-weight: 600;">${vehicleName}</td>
+      <td style="padding: 10px; border: 1px solid #ecf0f1;">${division}</td>
+      <td style="padding: 10px; border: 1px solid #ecf0f1;">${mainIssue}</td>
+      <td style="padding: 10px; border: 1px solid #ecf0f1; color: ${priorityColor}; font-weight: 600;">${priority}</td>
+      <td style="padding: 10px; border: 1px solid #ecf0f1;">${writtenBy}</td>
+      <td style="padding: 10px; border: 1px solid #ecf0f1;">${submittedBy}</td>
+      <td style="padding: 10px; border: 1px solid #ecf0f1; ${dateReviewed ? '' : 'color: #e74c3c; font-weight: 600;'}">${dateReviewed || 'Not Reviewed'}</td>
+      <td style="padding: 10px; border: 1px solid #ecf0f1;">${notedIssues}</td>
+    `;
+    
+    tbody.appendChild(tr);
+  });
 }
 
 function updateSummaryCounts(ready, warning, notReady) {
