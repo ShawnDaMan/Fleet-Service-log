@@ -371,7 +371,7 @@ function displayIssuesTable(rows) {
       <td style="padding: 10px; border: 1px solid #ecf0f1; white-space: nowrap;">
         ${accessToken ? `
           <button onclick="deleteIssue(${rows.length - index})" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">Delete</button>
-        ` : '<span style="color: #95a5a6; font-size: 0.85rem;">Sign in to edit</span>'}
+        ` : `<button onclick="alert('Please sign in to delete issues.'); handleSignIn();" style="padding: 5px 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Sign In</button>`}
       </td>
     `;
     
