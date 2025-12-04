@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Readiness - Fleet Service Log</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+  <style>
+    .readiness-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      max-width: 95%;
+      margin: 30px auto;
+    }
+    .vehicle-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 12px rgba(44,62,80,0.08);
+      border-left: 6px solid #2ecc71;
+      transition: transform 0.2s;
+    }
+    .vehicle-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 16px rgba(44,62,80,0.12);
+    }
+    .vehicle-card.not-ready {
+      border-left-color: #e74c3c;
+    }
+    .vehicle-card.warning {
+      border-left-color: #f39c12;
+    }
+    .vehicle-name {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 12px;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .status-ready {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-not-ready {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status-warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .issue-item {
+      background: #f7f9fa;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 6px;
+      border-left: 3px solid #bdc3c7;
+    }
+    .issue-item.priority-high {
+      border-left-color: #e74c3c;
+    }
+    .issue-item.priority-medium {
+      border-left-color: #f39c12;
+    }
+    .issue-item.priority-low {
+      border-left-color: #3498db;
+    }
+    .issue-title {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 4px;
+    }
+    .issue-meta {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+    }
+    .no-issues {
+      color: #27ae60;
+      font-weight: 500;
+      text-align: center;
+      padding: 20px;
+    }
+    .summary-stats {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      max-width: 95%;
+      margin: 30px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(44,62,80,0.08);
+    }
+    .stat-item {
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 600;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+    .stat-label {
+      color: #7f8c8d;
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+    .stat-ready .stat-number { color: #27ae60; }
+    .stat-warning .stat-number { color: #f39c12; }
+    .stat-not-ready .stat-number { color: #e74c3c; }
+    .nav-links {
+      text-align: center;
+      margin: 20px auto;
+    }
+    .nav-links a {
+      display: inline-block;
+      margin: 0 10px;
+      padding: 10px 20px;
+      background: #2980b9;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .nav-links a:hover {
+      background: #1a5a8a;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚗 Vehicle Readiness Dashboard</h1>
+  
+  <div id="authNotification" style="background: #fff3cd; color: #856404; padding: 12px; text-align: center; margin: 20px auto; max-width: 90%; border-radius: 6px; display: none;">
+    <strong>Please sign in with Google to view vehicle readiness data.</strong>
+    <div style="margin-top: 10px;">
+      <button id="signInBtn" onclick="handleSignIn()" style="background: #4285f4; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600;">Sign In with Google</button>
+    </div>
+  </div>
+
+  <div class="nav-links">
+    <a href="index.html">← Service Log</a>
+    <a href="fleet_service_charts.html">📊 Charts</a>
+  </div>
+
+  <div class="summary-stats" id="summaryStats" style="display: none;">
+    <div class="stat-item stat-ready">
+      <div class="stat-number" id="readyCount">0</div>
+      <div class="stat-label">Ready</div>
+    </div>
+    <div class="stat-item stat-warning">
+      <div class="stat-number" id="warningCount">0</div>
+      <div class="stat-label">Needs Attention</div>
+    </div>
+    <div class="stat-item stat-not-ready">
+      <div class="stat-number" id="notReadyCount">0</div>
+      <div class="stat-label">Not Ready</div>
+    </div>
+  </div>
+
+  <div class="readiness-grid" id="readinessGrid"></div>
+
+  <script src="assets/js/vehicle-readiness.js"></script>
+</body>
+</html>
