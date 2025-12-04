@@ -34,6 +34,10 @@ function gisLoaded() {
     scope: READINESS_CONFIG.scope,
     callback: (response) => {
       accessToken = response.access_token;
+      // Store token with expiry time (tokens typically last 1 hour)
+      const expiryTime = Date.now() + (3600 * 1000); // 1 hour from now
+      localStorage.setItem('google_access_token', accessToken);
+      localStorage.setItem('google_token_expiry', expiryTime);
       gapi.client.setToken({access_token: accessToken});
       updateSigninStatus(true);
       loadReadinessData();
@@ -45,7 +49,22 @@ function gisLoaded() {
 
 function maybeEnableButtons() {
   if (gapiInited && gisInited) {
-    document.getElementById('authNotification').style.display = 'block';
+    // Check for stored token
+    const storedToken = localStorage.getItem('google_access_token');
+    const tokenExpiry = localStorage.getItem('google_token_expiry');
+    
+    if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+      // Token is still valid, restore session
+      accessToken = storedToken;
+      gapi.client.setToken({access_token: accessToken});
+      updateSigninStatus(true);
+      loadReadinessData();
+    } else {
+      // Token expired or doesn't exist, clear storage and show sign-in
+      localStorage.removeItem('google_access_token');
+      localStorage.removeItem('google_token_expiry');
+      document.getElementById('authNotification').style.display = 'block';
+    }
   }
 }
 

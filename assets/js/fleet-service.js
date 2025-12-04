@@ -46,6 +46,10 @@ function initGoogleAPI() {
                 return;
               }
               accessToken = response.access_token;
+              // Store token with expiry (Google tokens last 1 hour)
+              const expiryTime = Date.now() + (3600 * 1000);
+              localStorage.setItem('google_access_token', accessToken);
+              localStorage.setItem('google_token_expiry', expiryTime.toString());
               gapi.client.setToken({access_token: accessToken});
               updateSigninStatus(true);
             }
@@ -53,7 +57,23 @@ function initGoogleAPI() {
         }
         
         gapiInitialized = true;
-        updateSigninStatus(false); // Start in signed-out state
+        
+        // Check for stored token
+        const storedToken = localStorage.getItem('google_access_token');
+        const tokenExpiry = localStorage.getItem('google_token_expiry');
+        
+        if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+          // Token still valid, restore session
+          accessToken = storedToken;
+          gapi.client.setToken({access_token: accessToken});
+          updateSigninStatus(true);
+        } else {
+          // Clear expired token
+          localStorage.removeItem('google_access_token');
+          localStorage.removeItem('google_token_expiry');
+          updateSigninStatus(false);
+        }
+        
         resolve();
       } catch (error) {
         reject(error);
@@ -103,8 +123,11 @@ function handleSignOut() {
     });
     accessToken = null;
     gapi.client.setToken(null);
-    updateSigninStatus(false);
   }
+  // Clear stored token
+  localStorage.removeItem('google_access_token');
+  localStorage.removeItem('google_token_expiry');
+  updateSigninStatus(false);
 }
 
 // Helpers
