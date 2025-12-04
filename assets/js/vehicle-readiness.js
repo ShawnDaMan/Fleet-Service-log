@@ -247,6 +247,8 @@ function displayReadinessCards(issuesByVehicle, allRows) {
   // Populate the Report Issue form dropdown with these vehicles
   populateVehicleDropdown(sortedVehicles);
 
+  console.log('About to process vehicle cards for:', sortedVehicles);
+  
   Array.from(allVehicles).sort().forEach(vehicleName => {
     const issues = issuesByVehicle[vehicleName] || [];
     const unreviewedIssues = issues.filter(issue => !issue.dateReviewed);
@@ -257,16 +259,11 @@ function displayReadinessCards(issuesByVehicle, allRows) {
       .filter(issue => issue.manualStatus) // Column K has a value
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
     
-    // Debug logging for Corvette
-    if (vehicleName.includes('Corvette')) {
-      console.log(`\n=== ${vehicleName} Debug ===`);
-      console.log('Total issues:', issues.length);
-      console.log('Unreviewed issues:', unreviewedIssues.length);
-      console.log('High priority unreviewed:', highPriorityIssues.length);
-      console.log('Manual override:', latestStatusOverride ? latestStatusOverride.manualStatus : 'none');
-      if (unreviewedIssues.length > 0) {
-        console.log('Unreviewed issue priorities:', unreviewedIssues.map(i => `"${i.priority}"`));
-      }
+    // Debug logging for all vehicles
+    console.log(`\n=== ${vehicleName} ===`);
+    console.log('  Issues:', issues.length, '| Unreviewed:', unreviewedIssues.length, '| High Priority:', highPriorityIssues.length);
+    if (unreviewedIssues.length > 0) {
+      console.log('  Priority values:', unreviewedIssues.map(i => `"${i.priority}"`));
     }
     
     let status = 'ready';
