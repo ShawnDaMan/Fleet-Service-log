@@ -115,6 +115,7 @@ async function loadReadinessData() {
     console.log('Response received:', response);
     const rows = response.result.values || [];
     console.log('Rows found:', rows.length);
+    console.log('First few rows:', rows.slice(0, 3));
     
     if (rows.length === 0) {
       document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #7f8c8d;">No data found.</p>';
@@ -127,6 +128,7 @@ async function loadReadinessData() {
       return;
     }
 
+    console.log('About to process rows and display...');
     // Skip header row and process data
     // Columns: Example question, Vehicle Make, Vehicle Model, Division, Date, Main Issue, 
     // Written Up By, Priority of Issue, Submitted By, Timestamp, [blank], Date Reviewed, Noted Issues
@@ -160,8 +162,12 @@ async function loadReadinessData() {
       issuesByVehicle[vehicleName].push(issue);
     });
 
+    console.log('Issues by vehicle:', issuesByVehicle);
+    console.log('Calling displayReadinessCards...');
     displayReadinessCards(issuesByVehicle);
+    console.log('Calling displayIssuesTable...');
     displayIssuesTable(rows);
+    console.log('Display functions completed');
   } catch (error) {
     console.error('Error loading readiness data:', error);
     document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #e74c3c;">Error loading data. Please try again.</p>';
@@ -169,7 +175,9 @@ async function loadReadinessData() {
 }
 
 function displayReadinessCards(issuesByVehicle) {
+  console.log('displayReadinessCards called with:', issuesByVehicle);
   const grid = document.getElementById('readinessGrid');
+  console.log('Grid element:', grid);
   grid.innerHTML = '';
   
   let readyCount = 0;
@@ -260,7 +268,9 @@ function displayReadinessCards(issuesByVehicle) {
 }
 
 function displayIssuesTable(rows) {
+  console.log('displayIssuesTable called with rows:', rows.length);
   const tbody = document.getElementById('issuesTableBody');
+  console.log('Table body element:', tbody);
   tbody.innerHTML = '';
   
   if (rows.length <= 1) {
