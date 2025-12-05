@@ -4,16 +4,13 @@ const READINESS_CONFIG = {
   clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com',
   spreadsheetId: '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk',
   range: 'Form Responses!A:M',
+  authSheetRange: 'Authorized Users!A:B', // New sheet for approved users
   discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
   scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email'
 };
 
-// Authorized users - add emails here to grant access
-const AUTHORIZED_USERS = [
-  'shawnnicholson2000@gmail.com',
-  // Add more authorized emails here
-  // 'example@braysmotor.com',
-];
+// Admin who can approve users
+const ADMIN_EMAIL = 'shawn.nicholson@braysmotor.com';
 
 let tokenClient;
 let accessToken = null;
@@ -46,16 +43,28 @@ async function initializeGapiClient() {
   const storedEmail = localStorage.getItem('authorized_user_email');
   
   if (storedToken && tokenExpiry && storedEmail && Date.now() < parseInt(tokenExpiry)) {
-    // Verify stored email is still authorized
-    if (AUTHORIZED_USERS.includes(storedEmail)) {
+    // Admin is always approved
+    if (storedEmail === ADMIN_EMAIL) {
       accessToken = storedToken;
       currentUserEmail = storedEmail;
       gapi.client.setToken({access_token: accessToken});
     } else {
-      // User was removed from authorized list
-      localStorage.removeItem('google_access_token');
-      localStorage.removeItem('google_token_expiry');
-      localStorage.removeItem('authorized_user_email');
+      // For other users, verify they're still approved
+      accessToken = storedToken;
+      gapi.client.setToken({access_token: accessToken});
+      
+      checkUserApproval(storedEmail).then(isApproved => {
+        if (isApproved) {
+          currentUserEmail = storedEmail;
+        } else {
+          // User was removed from approved list
+          localStorage.removeItem('google_access_token');
+          localStorage.removeItem('google_token_expiry');
+          localStorage.removeItem('authorized_user_email');
+          accessToken = null;
+          gapi.client.setToken(null);
+        }
+      });
     }
   }
   
@@ -91,16 +100,35 @@ function gisLoaded() {
         const userData = await userInfo.json();
         currentUserEmail = userData.email;
         
-        // Check if user is authorized
-        if (!AUTHORIZED_USERS.includes(currentUserEmail)) {
-          alert(`Access denied. Your email (${currentUserEmail}) is not authorized to edit this system. Please contact the administrator.`);
+        // Check if user is admin (always approved)
+        if (currentUserEmail === ADMIN_EMAIL) {
+          const expiryTime = Date.now() + (8 * 3600 * 1000);
+          localStorage.setItem('google_access_token', accessToken);
+          localStorage.setItem('google_token_expiry', expiryTime);
+          localStorage.setItem('authorized_user_email', currentUserEmail);
+          loadReadinessData();
+          return;
+        }
+        
+        // Check if user is in approved list from Google Sheet
+        const isApproved = await checkUserApproval(currentUserEmail);
+        
+        if (!isApproved) {
+          // User not approved - submit access request
+          const shouldRequest = confirm(`Your email (${currentUserEmail}) is not yet authorized.\n\nWould you like to request access? The administrator will be notified.`);
+          
+          if (shouldRequest) {
+            await submitAccessRequest(currentUserEmail, userData.name || 'Unknown');
+            alert('Access request submitted! You will be notified once approved.');
+          }
+          
           accessToken = null;
           currentUserEmail = null;
           localStorage.removeItem('google_access_token');
           localStorage.removeItem('google_token_expiry');
           localStorage.removeItem('authorized_user_email');
           gapi.client.setToken(null);
-          loadReadinessData(); // Reload to show sign-in buttons
+          loadReadinessData();
           return;
         }
         
@@ -168,6 +196,51 @@ function handleSignOut() {
   gapi.client.setToken(null);
   loadReadinessData(); // Reload to show sign-in buttons
   alert('You have been signed out.');
+}
+
+// Check if user email is approved in the Google Sheet
+async function checkUserApproval(email) {
+  try {
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: READINESS_CONFIG.authSheetRange
+    });
+    
+    const rows = response.result.values || [];
+    // Check if email exists in column A with "Approved" in column B
+    for (let row of rows) {
+      if (row[0] && row[0].toLowerCase() === email.toLowerCase() && 
+          row[1] && row[1].toLowerCase() === 'approved') {
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    // If sheet doesn't exist yet, user is not approved
+    console.error('Error checking approval:', error);
+    return false;
+  }
+}
+
+// Submit access request to Google Sheet
+async function submitAccessRequest(email, name) {
+  try {
+    const timestamp = new Date().toLocaleString();
+    const values = [[email, 'Pending', name, timestamp]];
+    
+    await gapi.client.sheets.spreadsheets.values.append({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: 'Authorized Users!A:D',
+      valueInputOption: 'USER_ENTERED',
+      resource: { values }
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error submitting access request:', error);
+    alert('Failed to submit access request. The sheet may not be set up yet.');
+    return false;
+  }
 }
 
 // Load readiness data from Google Sheets
