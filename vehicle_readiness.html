@@ -252,9 +252,12 @@
         <textarea id="editNotes" rows="3" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;"></textarea>
       </div>
 
-      <div style="display: flex; gap: 10px; justify-content: flex-end;">
-        <button onclick="closeEditIssueModal()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
-        <button onclick="saveEditedIssue()" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Save Changes</button>
+      <div style="display: flex; gap: 10px; justify-content: space-between;">
+        <button onclick="deleteIssueFromModal()" style="padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Delete Issue</button>
+        <div style="display: flex; gap: 10px;">
+          <button onclick="closeEditIssueModal()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
+          <button onclick="saveEditedIssue()" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Save Changes</button>
+        </div>
       </div>
     </div>
   </div>
@@ -291,7 +294,7 @@
             <th style="padding: 8px; text-align: left; border: 1px solid #bdc3c7; width: 100px; font-size: 0.9rem;">Submitted By</th>
             <th style="padding: 8px; text-align: left; border: 1px solid #bdc3c7; width: 100px; font-size: 0.9rem;">Reviewed</th>
             <th style="padding: 8px; text-align: left; border: 1px solid #bdc3c7; width: 150px; font-size: 0.9rem;">Noted Issues</th>
-            <th style="padding: 8px; text-align: left; border: 1px solid #bdc3c7; width: 170px; font-size: 0.9rem;">Actions</th>
+            <th style="padding: 8px; text-align: left; border: 1px solid #bdc3c7; width: 90px; font-size: 0.9rem;">Action</th>
           </tr>
         </thead>
         <tbody id="issuesTableBody">

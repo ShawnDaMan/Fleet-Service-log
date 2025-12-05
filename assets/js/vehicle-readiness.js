@@ -359,9 +359,8 @@ function displayIssuesTable(rows) {
       <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${notedIssues}</td>
       <td style="padding: 6px 8px; border: 1px solid #ecf0f1; white-space: nowrap;">
         ${accessToken ? `
-          <button onclick="editIssue(${rows.length - index})" style="padding: 5px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">Edit</button>
-          <button onclick="deleteIssue(${rows.length - index})" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Delete</button>
-        ` : `<button onclick="alert('Please sign in to edit or delete issues.'); handleSignIn();" style="padding: 5px 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Sign In</button>`}
+          <button onclick="editIssue(${rows.length - index})" style="padding: 5px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Edit</button>
+        ` : `<button onclick="alert('Please sign in to edit issues.'); handleSignIn();" style="padding: 5px 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Sign In</button>`}
       </td>
     `;
     
@@ -474,6 +473,35 @@ async function editIssue(rowIndex) {
 function closeEditIssueModal() {
   document.getElementById('editIssueModal').style.display = 'none';
   editingRowData = null;
+}
+
+async function deleteIssueFromModal() {
+  if (!accessToken) {
+    alert('Please sign in with Google to delete issues.');
+    handleSignIn();
+    return;
+  }
+  
+  if (!confirm('Are you sure you want to delete this issue? This cannot be undone.')) {
+    return;
+  }
+  
+  const rowIndex = document.getElementById('editRowIndex').value;
+  
+  try {
+    // Delete the row by clearing all values
+    await gapi.client.sheets.spreadsheets.values.clear({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: `Form Responses!A${rowIndex}:M${rowIndex}`
+    });
+    
+    alert('Issue deleted successfully!');
+    closeEditIssueModal();
+    loadReadinessData(); // Reload data
+  } catch (error) {
+    console.error('Error deleting issue:', error);
+    alert('Failed to delete issue. Please try again.');
+  }
 }
 
 async function saveEditedIssue() {
