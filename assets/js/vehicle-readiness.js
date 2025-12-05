@@ -15,6 +15,11 @@ let gisInited = false;
 let isSignedIn = false;
 let autoRefreshInterval = null;
 
+// Pagination variables
+let currentPage = 1;
+let rowsPerPage = 50;
+let allIssuesData = [];
+
 // Initialize Google API
 function gapiLoaded() {
   gapi.load('client', initializeGapiClient);
@@ -311,12 +316,23 @@ function displayIssuesTable(rows) {
   
   if (rows.length <= 1) {
     tbody.innerHTML = '<tr><td colspan="10" style="padding: 20px; text-align: center; color: #7f8c8d;">No issues reported yet.</td></tr>';
+    updatePaginationControls(0);
     return;
   }
   
-  const dataRows = rows.slice(1).reverse();
+  // Store all data
+  allIssuesData = rows.slice(1).reverse();
   
-  dataRows.forEach((row, index) => {
+  // Calculate pagination
+  const totalIssues = allIssuesData.length;
+  const totalPages = Math.ceil(totalIssues / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = Math.min(startIndex + rowsPerPage, totalIssues);
+  const pageData = allIssuesData.slice(startIndex, endIndex);
+  
+  // Render current page
+  pageData.forEach((row, index) => {
+    const actualIndex = startIndex + index;
     const vehicleMake = row[1] || '';
     const vehicleModel = row[2] || '';
     const vehicleName = `${vehicleMake} ${vehicleModel}`.trim();
@@ -347,6 +363,9 @@ function displayIssuesTable(rows) {
       tr.style.borderLeft = `4px solid ${priorityColor}`;
     }
     
+    // Calculate row index for edit/delete (counting from end of original array)
+    const rowIndexForAction = rows.length - actualIndex;
+    
     tr.innerHTML = `
       <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${date}</td>
       <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${vehicleName}</td>
@@ -359,15 +378,64 @@ function displayIssuesTable(rows) {
       <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${notedIssues}</td>
       <td style="padding: 6px 8px; border: 1px solid #ecf0f1; white-space: nowrap;">
         ${accessToken ? `
-          <button onclick="editIssue(${rows.length - index})" style="padding: 5px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Edit</button>
+          <button onclick="editIssue(${rowIndexForAction})" style="padding: 5px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Edit</button>
         ` : `<button onclick="alert('Please sign in to edit issues.'); handleSignIn();" style="padding: 5px 10px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Sign In</button>`}
       </td>
     `;
     
     tbody.appendChild(tr);
   });
+  
+  updatePaginationControls(totalIssues);
   } catch (error) {
     console.error('Error displaying issues table:', error);
+  }
+}
+
+function updatePaginationControls(totalIssues) {
+  const totalPages = Math.ceil(totalIssues / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage + 1;
+  const endIndex = Math.min(currentPage * rowsPerPage, totalIssues);
+  
+  // Update info text
+  const infoEl = document.getElementById('paginationInfo');
+  if (infoEl) {
+    if (totalIssues === 0) {
+      infoEl.textContent = 'Showing 0 of 0 issues';
+    } else {
+      infoEl.textContent = `Showing ${startIndex}-${endIndex} of ${totalIssues} issues`;
+    }
+  }
+  
+  // Update buttons
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  
+  if (prevBtn) {
+    prevBtn.disabled = currentPage <= 1;
+    prevBtn.style.opacity = currentPage <= 1 ? '0.5' : '1';
+    prevBtn.style.cursor = currentPage <= 1 ? 'not-allowed' : 'pointer';
+  }
+  
+  if (nextBtn) {
+    nextBtn.disabled = currentPage >= totalPages;
+    nextBtn.style.opacity = currentPage >= totalPages ? '0.5' : '1';
+    nextBtn.style.cursor = currentPage >= totalPages ? 'not-allowed' : 'pointer';
+  }
+}
+
+function nextPage() {
+  const totalPages = Math.ceil(allIssuesData.length / rowsPerPage);
+  if (currentPage < totalPages) {
+    currentPage++;
+    displayIssuesTable([['header'], ...allIssuesData.slice().reverse()]);
+  }
+}
+
+function previousPage() {
+  if (currentPage > 1) {
+    currentPage--;
+    displayIssuesTable([['header'], ...allIssuesData.slice().reverse()]);
   }
 }
 
