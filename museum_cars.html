@@ -192,8 +192,8 @@
         return;
       }
       
-      // Store data (excluding header)
-      allMuseumData = rows.slice(1);
+      // Store data (excluding header row 1 and data row 2)
+      allMuseumData = rows.slice(2);
       
       renderTable();
     }
