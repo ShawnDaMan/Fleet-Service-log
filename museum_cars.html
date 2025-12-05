@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Museum Car Upkeep - Fleet Service Log</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: white;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    .nav-links {
+      text-align: center;
+      margin: 20px auto;
+    }
+    .nav-links a {
+      display: inline-block;
+      margin: 0 10px;
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: background 0.3s;
+    }
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    .container {
+      background: #fff;
+      max-width: 95%;
+      margin: 30px auto;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(44,62,80,0.08);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Roboto', Arial, sans-serif;
+      margin-top: 20px;
+    }
+    thead tr {
+      background: #34495e;
+      color: white;
+    }
+    th {
+      padding: 12px;
+      text-align: left;
+      border: 1px solid #bdc3c7;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    td {
+      padding: 10px;
+      border: 1px solid #ecf0f1;
+      font-size: 0.9rem;
+    }
+    tbody tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+    tbody tr:hover {
+      background: #e8f4f8;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #7f8c8d;
+      font-size: 1.1rem;
+    }
+    .error {
+      text-align: center;
+      padding: 40px;
+      color: #e74c3c;
+      font-size: 1.1rem;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏛️ Museum Car Upkeep</h1>
+
+  <div class="nav-links">
+    <a href="index.html">← Service Log</a>
+    <a href="vehicle_readiness.html">🚗 Vehicle Readiness</a>
+    <a href="fleet_service_charts.html">📊 Charts</a>
+  </div>
+
+  <div class="container">
+    <h2 style="color: #2c3e50; font-family: 'Montserrat', 'Roboto', Arial, sans-serif; margin-bottom: 10px;">Museum Collection Inventory</h2>
+    <div class="table-wrapper">
+      <table id="museumTable">
+        <thead>
+          <tr>
+            <th>Inventory Number</th>
+            <th>Last 6 Of VIN</th>
+            <th>Year</th>
+            <th>VIN</th>
+            <th>Make</th>
+            <th>Model</th>
+            <th>Color</th>
+            <th>Notes</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="museumTableBody">
+          <tr>
+            <td colspan="9" class="loading">Loading museum cars...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Google Sheets Configuration for Museum Cars
+    const MUSEUM_CONFIG = {
+      apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
+      spreadsheetId: '1TZuZo-269CP-cDZfIdKkbL1V7kc_lC7vyPWd31I5GbY',
+      range: 'Master!A:I'
+    };
+
+    // Load museum car data
+    async function loadMuseumData() {
+      try {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${MUSEUM_CONFIG.spreadsheetId}/values/${MUSEUM_CONFIG.range}?key=${MUSEUM_CONFIG.apiKey}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error('Failed to load data');
+        }
+        
+        const data = await response.json();
+        const rows = data.values || [];
+        
+        displayMuseumCars(rows);
+      } catch (error) {
+        console.error('Error loading museum data:', error);
+        document.getElementById('museumTableBody').innerHTML = 
+          '<tr><td colspan="9" class="error">Failed to load museum car data. Please check that the spreadsheet is shared publicly.</td></tr>';
+      }
+    }
+
+    function displayMuseumCars(rows) {
+      const tbody = document.getElementById('museumTableBody');
+      
+      if (rows.length <= 1) {
+        tbody.innerHTML = '<tr><td colspan="9" class="loading">No museum cars found.</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = '';
+      
+      // Skip header row (index 0)
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const tr = document.createElement('tr');
+        
+        // Display all 9 columns (A through I)
+        tr.innerHTML = `
+          <td>${row[0] || ''}</td>
+          <td>${row[1] || ''}</td>
+          <td>${row[2] || ''}</td>
+          <td>${row[3] || ''}</td>
+          <td style="font-weight: 600;">${row[4] || ''}</td>
+          <td style="font-weight: 600;">${row[5] || ''}</td>
+          <td>${row[6] || ''}</td>
+          <td>${row[7] || ''}</td>
+          <td>${row[8] || ''}</td>
+        `;
+        
+        tbody.appendChild(tr);
+      }
+    }
+
+    // Load data when page loads
+    window.addEventListener('DOMContentLoaded', loadMuseumData);
+    
+    // Auto-refresh every 5 minutes
+    setInterval(loadMuseumData, 300000);
+  </script>
+</body>
+</html>
