@@ -4,13 +4,9 @@ const READINESS_CONFIG = {
   clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com',
   spreadsheetId: '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk',
   range: 'Form Responses!A:M',
-  authSheetRange: 'Authorized Users!A:B', // New sheet for approved users
   discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-  scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email'
+  scope: 'https://www.googleapis.com/auth/spreadsheets'
 };
-
-// Admin who can approve users
-const ADMIN_EMAIL = 'shawn.nicholson@braysmotor.com';
 
 let tokenClient;
 let accessToken = null;
@@ -18,7 +14,6 @@ let gapiInited = false;
 let gisInited = false;
 let isSignedIn = false;
 let autoRefreshInterval = null;
-let currentUserEmail = null;
 
 // Pagination variables
 let currentPage = 1;
@@ -37,35 +32,13 @@ async function initializeGapiClient() {
   });
   gapiInited = true;
   
-  // Check for stored token and authorized email
+  // Check for stored token
   const storedToken = localStorage.getItem('google_access_token');
   const tokenExpiry = localStorage.getItem('google_token_expiry');
-  const storedEmail = localStorage.getItem('authorized_user_email');
   
-  if (storedToken && tokenExpiry && storedEmail && Date.now() < parseInt(tokenExpiry)) {
-    // Admin is always approved
-    if (storedEmail === ADMIN_EMAIL) {
-      accessToken = storedToken;
-      currentUserEmail = storedEmail;
-      gapi.client.setToken({access_token: accessToken});
-    } else {
-      // For other users, verify they're still approved
-      accessToken = storedToken;
-      gapi.client.setToken({access_token: accessToken});
-      
-      checkUserApproval(storedEmail).then(isApproved => {
-        if (isApproved) {
-          currentUserEmail = storedEmail;
-        } else {
-          // User was removed from approved list
-          localStorage.removeItem('google_access_token');
-          localStorage.removeItem('google_token_expiry');
-          localStorage.removeItem('authorized_user_email');
-          accessToken = null;
-          gapi.client.setToken(null);
-        }
-      });
-    }
+  if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+    accessToken = storedToken;
+    gapi.client.setToken({access_token: accessToken});
   }
   
   // Check if elements exist, if not wait
@@ -88,61 +61,13 @@ function gisLoaded() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: READINESS_CONFIG.clientId,
     scope: READINESS_CONFIG.scope,
-    callback: async (response) => {
+    callback: (response) => {
       accessToken = response.access_token;
+      const expiryTime = Date.now() + (8 * 3600 * 1000);
+      localStorage.setItem('google_access_token', accessToken);
+      localStorage.setItem('google_token_expiry', expiryTime);
       gapi.client.setToken({access_token: accessToken});
-      
-      // Verify user email is authorized
-      try {
-        const userInfo = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        const userData = await userInfo.json();
-        currentUserEmail = userData.email;
-        
-        // Check if user is admin (always approved)
-        if (currentUserEmail === ADMIN_EMAIL) {
-          const expiryTime = Date.now() + (8 * 3600 * 1000);
-          localStorage.setItem('google_access_token', accessToken);
-          localStorage.setItem('google_token_expiry', expiryTime);
-          localStorage.setItem('authorized_user_email', currentUserEmail);
-          loadReadinessData();
-          return;
-        }
-        
-        // Check if user is in approved list from Google Sheet
-        const isApproved = await checkUserApproval(currentUserEmail);
-        
-        if (!isApproved) {
-          // User not approved - submit access request
-          const shouldRequest = confirm(`Your email (${currentUserEmail}) is not yet authorized.\n\nWould you like to request access? The administrator will be notified.`);
-          
-          if (shouldRequest) {
-            await submitAccessRequest(currentUserEmail, userData.name || 'Unknown');
-            alert('Access request submitted! You will be notified once approved.');
-          }
-          
-          accessToken = null;
-          currentUserEmail = null;
-          localStorage.removeItem('google_access_token');
-          localStorage.removeItem('google_token_expiry');
-          localStorage.removeItem('authorized_user_email');
-          gapi.client.setToken(null);
-          loadReadinessData();
-          return;
-        }
-        
-        // User is authorized - save credentials
-        const expiryTime = Date.now() + (8 * 3600 * 1000);
-        localStorage.setItem('google_access_token', accessToken);
-        localStorage.setItem('google_token_expiry', expiryTime);
-        localStorage.setItem('authorized_user_email', currentUserEmail);
-        loadReadinessData();
-      } catch (error) {
-        console.error('Error verifying user:', error);
-        alert('Failed to verify user credentials. Please try again.');
-        accessToken = null;
-      }
+      loadReadinessData();
     },
   });
   gisInited = true;
@@ -172,14 +97,6 @@ function updateSigninStatus(ready) {
   document.getElementById('summaryStats').style.display = 'flex';
   document.getElementById('readinessGrid').style.display = 'grid';
   
-  // Update user info display
-  const userInfo = document.getElementById('userInfo');
-  if (userInfo && currentUserEmail) {
-    userInfo.innerHTML = `Signed in as ${currentUserEmail} | <a href="#" onclick="handleSignOut(); return false;" style="color: #e74c3c; text-decoration: none;">Sign Out</a>`;
-  } else if (userInfo) {
-    userInfo.innerHTML = '';
-  }
-  
   // Start auto-refresh every 60 seconds
   if (autoRefreshInterval) clearInterval(autoRefreshInterval);
   autoRefreshInterval = setInterval(() => {
@@ -189,63 +106,11 @@ function updateSigninStatus(ready) {
 
 function handleSignOut() {
   accessToken = null;
-  currentUserEmail = null;
   localStorage.removeItem('google_access_token');
   localStorage.removeItem('google_token_expiry');
-  localStorage.removeItem('authorized_user_email');
   gapi.client.setToken(null);
-  loadReadinessData(); // Reload to show sign-in buttons
+  loadReadinessData();
   alert('You have been signed out.');
-}
-
-// Check if user email is approved in the Google Sheet
-async function checkUserApproval(email) {
-  try {
-    const response = await gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId: READINESS_CONFIG.spreadsheetId,
-      range: READINESS_CONFIG.authSheetRange
-    });
-    
-    const rows = response.result.values || [];
-    console.log('Checking approval for:', email);
-    console.log('Found rows in Authorized Users sheet:', rows);
-    
-    // Check if email exists in column A with "Approved" in column B
-    for (let row of rows) {
-      if (row[0] && row[0].toLowerCase().trim() === email.toLowerCase().trim() && 
-          row[1] && row[1].toLowerCase().trim() === 'approved') {
-        console.log('User approved!');
-        return true;
-      }
-    }
-    console.log('User not found or not approved');
-    return false;
-  } catch (error) {
-    // If sheet doesn't exist yet, user is not approved
-    console.error('Error checking approval:', error);
-    return false;
-  }
-}
-
-// Submit access request to Google Sheet
-async function submitAccessRequest(email, name) {
-  try {
-    const timestamp = new Date().toLocaleString();
-    const values = [[email, 'Pending', name, timestamp]];
-    
-    await gapi.client.sheets.spreadsheets.values.append({
-      spreadsheetId: READINESS_CONFIG.spreadsheetId,
-      range: 'Authorized Users!A:D',
-      valueInputOption: 'USER_ENTERED',
-      resource: { values }
-    });
-    
-    return true;
-  } catch (error) {
-    console.error('Error submitting access request:', error);
-    alert('Failed to submit access request. The sheet may not be set up yet.');
-    return false;
-  }
 }
 
 // Load readiness data from Google Sheets
