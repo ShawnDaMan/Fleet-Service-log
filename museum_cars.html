@@ -187,13 +187,13 @@
     function displayMuseumCars(rows) {
       const tbody = document.getElementById('museumTableBody');
       
-      if (rows.length <= 1) {
+      if (rows.length <= 3) {
         tbody.innerHTML = '<tr><td colspan="9" class="loading">No museum cars found.</td></tr>';
         return;
       }
       
-      // Store data (excluding header row 1 and data row 2)
-      allMuseumData = rows.slice(2);
+      // Store data starting from row 4 (index 3) - skip rows 1, 2, and 3 (headers)
+      allMuseumData = rows.slice(3);
       
       renderTable();
     }
