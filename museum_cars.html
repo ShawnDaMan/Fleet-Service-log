@@ -68,6 +68,25 @@
       border: 1px solid #bdc3c7;
       font-size: 0.9rem;
       font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    th:hover {
+      background: #2c3e50;
+    }
+    th::after {
+      content: ' ⇅';
+      opacity: 0.5;
+      font-size: 0.8rem;
+    }
+    th.sort-asc::after {
+      content: ' ▲';
+      opacity: 1;
+    }
+    th.sort-desc::after {
+      content: ' ▼';
+      opacity: 1;
     }
     td {
       padding: 10px;
@@ -112,15 +131,15 @@
       <table id="museumTable">
         <thead>
           <tr>
-            <th>Inventory Number</th>
-            <th>Last 6 Of VIN</th>
-            <th>Year</th>
-            <th>VIN</th>
-            <th>Make</th>
-            <th>Model</th>
-            <th>Color</th>
-            <th>Notes</th>
-            <th>Total</th>
+            <th onclick="sortTable(0)">Inventory Number</th>
+            <th onclick="sortTable(1)">Last 6 Of VIN</th>
+            <th onclick="sortTable(2)">Year</th>
+            <th onclick="sortTable(3)">VIN</th>
+            <th onclick="sortTable(4)">Make</th>
+            <th onclick="sortTable(5)">Model</th>
+            <th onclick="sortTable(6)">Color</th>
+            <th onclick="sortTable(7)">Notes</th>
+            <th onclick="sortTable(8)">Total</th>
           </tr>
         </thead>
         <tbody id="museumTableBody">
@@ -139,6 +158,10 @@
       spreadsheetId: '1TZuZo-269CP-cDZfIdKkbL1V7kc_lC7vyPWd31I5GbY',
       range: 'Master!A:I'
     };
+
+    let allMuseumData = [];
+    let sortColumn = -1;
+    let sortAscending = true;
 
     // Load museum car data
     async function loadMuseumData() {
@@ -169,11 +192,18 @@
         return;
       }
       
+      // Store data (excluding header)
+      allMuseumData = rows.slice(1);
+      
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('museumTableBody');
       tbody.innerHTML = '';
       
-      // Skip header row (index 0)
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
+      for (let i = 0; i < allMuseumData.length; i++) {
+        const row = allMuseumData[i];
         const tr = document.createElement('tr');
         
         // Display all 9 columns (A through I)
@@ -191,6 +221,50 @@
         
         tbody.appendChild(tr);
       }
+    }
+
+    function sortTable(columnIndex) {
+      // Clear previous sort indicators
+      const headers = document.querySelectorAll('th');
+      headers.forEach(h => {
+        h.classList.remove('sort-asc', 'sort-desc');
+      });
+      
+      // Toggle sort direction if same column
+      if (sortColumn === columnIndex) {
+        sortAscending = !sortAscending;
+      } else {
+        sortColumn = columnIndex;
+        sortAscending = true;
+      }
+      
+      // Sort the data
+      allMuseumData.sort((a, b) => {
+        let aVal = a[columnIndex] || '';
+        let bVal = b[columnIndex] || '';
+        
+        // Try to parse as numbers for numeric columns
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+        
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return sortAscending ? aNum - bNum : bNum - aNum;
+        }
+        
+        // String comparison
+        aVal = aVal.toString().toLowerCase();
+        bVal = bVal.toString().toLowerCase();
+        
+        if (aVal < bVal) return sortAscending ? -1 : 1;
+        if (aVal > bVal) return sortAscending ? 1 : -1;
+        return 0;
+      });
+      
+      // Add sort indicator to clicked column
+      headers[columnIndex].classList.add(sortAscending ? 'sort-asc' : 'sort-desc');
+      
+      // Re-render table
+      renderTable();
     }
 
     // Load data when page loads
