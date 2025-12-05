@@ -348,16 +348,16 @@ function displayIssuesTable(rows) {
     }
     
     tr.innerHTML = `
-      <td style="padding: 10px; border: 1px solid #ecf0f1;">${date}</td>
-      <td style="padding: 10px; border: 1px solid #ecf0f1; font-weight: 600;">${vehicleName}</td>
-      <td style="padding: 10px; border: 1px solid #ecf0f1;">${division}</td>
-      <td style="padding: 10px; border: 1px solid #ecf0f1;">${mainIssue}</td>
-      <td style="padding: 10px; border: 1px solid #ecf0f1; color: ${priorityColor}; font-weight: 600;">${priority}</td>
-      <td style="padding: 10px; border: 1px solid #ecf0f1;">${writtenBy}</td>
-      <td style="padding: 10px; border: 1px solid #ecf0f1;">${submittedBy}</td>
-      <td style="padding: 10px; border: 1px solid #ecf0f1; ${dateReviewed ? '' : 'color: #e74c3c; font-weight: 600;'}">${dateReviewed || 'Not Reviewed'}</td>
-      <td style="padding: 10px; border: 1px solid #ecf0f1;">${notedIssues}</td>
-      <td style="padding: 10px; border: 1px solid #ecf0f1; white-space: nowrap;">
+      <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${date}</td>
+      <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${vehicleName}</td>
+      <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${division}</td>
+      <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${mainIssue}</td>
+      <td style="padding: 6px 8px; border: 1px solid #ecf0f1; color: ${priorityColor}; font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${priority}</td>
+      <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${writtenBy}</td>
+      <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${submittedBy}</td>
+      <td style="padding: 6px 8px; border: 1px solid #ecf0f1; ${dateReviewed ? '' : 'color: #e74c3c; font-weight: 600;'} font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${dateReviewed || 'Not Reviewed'}</td>
+      <td style="padding: 6px 8px; border: 1px solid #ecf0f1; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis;">${notedIssues}</td>
+      <td style="padding: 6px 8px; border: 1px solid #ecf0f1; white-space: nowrap;">
         ${accessToken ? `
           <button onclick="editIssue(${rows.length - index})" style="padding: 5px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">Edit</button>
           <button onclick="deleteIssue(${rows.length - index})" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Delete</button>
