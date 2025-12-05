@@ -5,8 +5,15 @@ const READINESS_CONFIG = {
   spreadsheetId: '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk',
   range: 'Form Responses!A:M',
   discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-  scope: 'https://www.googleapis.com/auth/spreadsheets'
+  scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email'
 };
+
+// Authorized users - add emails here to grant access
+const AUTHORIZED_USERS = [
+  'shawnnicholson2000@gmail.com',
+  // Add more authorized emails here
+  // 'example@braysmotor.com',
+];
 
 let tokenClient;
 let accessToken = null;
@@ -14,6 +21,7 @@ let gapiInited = false;
 let gisInited = false;
 let isSignedIn = false;
 let autoRefreshInterval = null;
+let currentUserEmail = null;
 
 // Pagination variables
 let currentPage = 1;
@@ -32,13 +40,23 @@ async function initializeGapiClient() {
   });
   gapiInited = true;
   
-  // Check for stored token
+  // Check for stored token and authorized email
   const storedToken = localStorage.getItem('google_access_token');
   const tokenExpiry = localStorage.getItem('google_token_expiry');
+  const storedEmail = localStorage.getItem('authorized_user_email');
   
-  if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-    accessToken = storedToken;
-    gapi.client.setToken({access_token: accessToken});
+  if (storedToken && tokenExpiry && storedEmail && Date.now() < parseInt(tokenExpiry)) {
+    // Verify stored email is still authorized
+    if (AUTHORIZED_USERS.includes(storedEmail)) {
+      accessToken = storedToken;
+      currentUserEmail = storedEmail;
+      gapi.client.setToken({access_token: accessToken});
+    } else {
+      // User was removed from authorized list
+      localStorage.removeItem('google_access_token');
+      localStorage.removeItem('google_token_expiry');
+      localStorage.removeItem('authorized_user_email');
+    }
   }
   
   // Check if elements exist, if not wait
@@ -61,13 +79,42 @@ function gisLoaded() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: READINESS_CONFIG.clientId,
     scope: READINESS_CONFIG.scope,
-    callback: (response) => {
+    callback: async (response) => {
       accessToken = response.access_token;
-      const expiryTime = Date.now() + (8 * 3600 * 1000);
-      localStorage.setItem('google_access_token', accessToken);
-      localStorage.setItem('google_token_expiry', expiryTime);
       gapi.client.setToken({access_token: accessToken});
-      loadReadinessData();
+      
+      // Verify user email is authorized
+      try {
+        const userInfo = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const userData = await userInfo.json();
+        currentUserEmail = userData.email;
+        
+        // Check if user is authorized
+        if (!AUTHORIZED_USERS.includes(currentUserEmail)) {
+          alert(`Access denied. Your email (${currentUserEmail}) is not authorized to edit this system. Please contact the administrator.`);
+          accessToken = null;
+          currentUserEmail = null;
+          localStorage.removeItem('google_access_token');
+          localStorage.removeItem('google_token_expiry');
+          localStorage.removeItem('authorized_user_email');
+          gapi.client.setToken(null);
+          loadReadinessData(); // Reload to show sign-in buttons
+          return;
+        }
+        
+        // User is authorized - save credentials
+        const expiryTime = Date.now() + (8 * 3600 * 1000);
+        localStorage.setItem('google_access_token', accessToken);
+        localStorage.setItem('google_token_expiry', expiryTime);
+        localStorage.setItem('authorized_user_email', currentUserEmail);
+        loadReadinessData();
+      } catch (error) {
+        console.error('Error verifying user:', error);
+        alert('Failed to verify user credentials. Please try again.');
+        accessToken = null;
+      }
     },
   });
   gisInited = true;
@@ -97,11 +144,30 @@ function updateSigninStatus(ready) {
   document.getElementById('summaryStats').style.display = 'flex';
   document.getElementById('readinessGrid').style.display = 'grid';
   
+  // Update user info display
+  const userInfo = document.getElementById('userInfo');
+  if (userInfo && currentUserEmail) {
+    userInfo.innerHTML = `Signed in as ${currentUserEmail} | <a href="#" onclick="handleSignOut(); return false;" style="color: #e74c3c; text-decoration: none;">Sign Out</a>`;
+  } else if (userInfo) {
+    userInfo.innerHTML = '';
+  }
+  
   // Start auto-refresh every 60 seconds
   if (autoRefreshInterval) clearInterval(autoRefreshInterval);
   autoRefreshInterval = setInterval(() => {
     loadReadinessData();
   }, 60000);
+}
+
+function handleSignOut() {
+  accessToken = null;
+  currentUserEmail = null;
+  localStorage.removeItem('google_access_token');
+  localStorage.removeItem('google_token_expiry');
+  localStorage.removeItem('authorized_user_email');
+  gapi.client.setToken(null);
+  loadReadinessData(); // Reload to show sign-in buttons
+  alert('You have been signed out.');
 }
 
 // Load readiness data from Google Sheets
