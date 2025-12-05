@@ -207,13 +207,18 @@ async function checkUserApproval(email) {
     });
     
     const rows = response.result.values || [];
+    console.log('Checking approval for:', email);
+    console.log('Found rows in Authorized Users sheet:', rows);
+    
     // Check if email exists in column A with "Approved" in column B
     for (let row of rows) {
-      if (row[0] && row[0].toLowerCase() === email.toLowerCase() && 
-          row[1] && row[1].toLowerCase() === 'approved') {
+      if (row[0] && row[0].toLowerCase().trim() === email.toLowerCase().trim() && 
+          row[1] && row[1].toLowerCase().trim() === 'approved') {
+        console.log('User approved!');
         return true;
       }
     }
+    console.log('User not found or not approved');
     return false;
   } catch (error) {
     // If sheet doesn't exist yet, user is not approved
