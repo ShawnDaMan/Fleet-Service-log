@@ -214,26 +214,22 @@ function displayReadinessCards(issuesByVehicle, allRows) {
   Array.from(allVehicles).sort().forEach(vehicleName => {
     const issues = issuesByVehicle[vehicleName] || [];
     const unreviewedIssues = issues.filter(issue => !issue.dateReviewed);
-    const highPriorityIssues = unreviewedIssues.filter(issue => (issue.priority || '').toLowerCase().includes('high'));
-    
+    const highPriorityUnreviewed = unreviewedIssues.some(issue => (issue.priority || '').toLowerCase() === 'high');
+    const anyUnreviewed = unreviewedIssues.length > 0;
     const latestStatusOverride = issues
       .filter(issue => issue.manualStatus)
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
-    
+
     let status = 'ready';
     let statusText = 'Ready';
     let cardClass = 'vehicle-card';
-    
-    const mediumHighPriorityIssues = unreviewedIssues.filter(issue => 
-      !(issue.priority || '').toLowerCase().includes('low')
-    );
-    
-    if (highPriorityIssues.length > 0) {
+
+    if (highPriorityUnreviewed) {
       status = 'not-ready';
       statusText = 'Not Ready';
       cardClass = 'vehicle-card not-ready';
       notReadyCount++;
-    } else if (mediumHighPriorityIssues.length > 0) {
+    } else if (anyUnreviewed) {
       status = 'warning';
       statusText = 'Needs Attention';
       cardClass = 'vehicle-card warning';
