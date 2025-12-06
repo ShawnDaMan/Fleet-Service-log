@@ -619,6 +619,7 @@ async function loadTableFromGoogleSheets() {
     
     updateTotals();
     updateSummaryCards();
+    populateFilterVehicles();
     console.log('Data loaded from Google Sheets successfully');
   } catch (error) {
     console.error('Error loading from Google Sheets:', error);
