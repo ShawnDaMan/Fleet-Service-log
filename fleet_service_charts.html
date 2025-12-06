@@ -201,7 +201,7 @@
       });
       const costs = sortedVehicles.map(v => vehicleTotals[v]);
       const vehicleBarColors = sortedVehicles.map(v => vehicleColorMap[v]);
-      // Bar chart - Costs by Vehicle
+      // Bar chart - Costs by Vehicle (filtered)
       const ctx = document.getElementById('costChart').getContext('2d');
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       new Chart(ctx, {
@@ -213,8 +213,8 @@
         options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Cost (USD)' } }, x: { ticks: { maxRotation: 45, minRotation: 0 } } } }
       });
 
-      // Tires breakdown chart
-      const tiresData = allData.filter(d => d.serviceType === 'Tires');
+      // Tires breakdown chart (filtered)
+      const tiresData = filteredData.filter(d => d.serviceType === 'Tires');
       const tiresByVehicle = {};
       tiresData.forEach(entry => {
         const vehicleId = entry.vehicleId;
@@ -235,7 +235,7 @@
         },
         options: { responsive: true, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: function(context) { return context.label + ': $' + context.parsed.toFixed(2); } } } } }
       });
-      // Pie chart - Service Type Distribution
+      // Pie chart - Service Type Distribution (filtered)
       const pieCtx = document.getElementById('serviceTypePieChart').getContext('2d');
       pieCtx.clearRect(0, 0, pieCtx.canvas.width, pieCtx.canvas.height);
       new Chart(pieCtx, {
@@ -246,7 +246,7 @@
         },
         options: { responsive: true, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: function(context) { return context.label + ': $' + context.parsed.toFixed(2); } } } } }
       });
-      // Line chart - Monthly Cost Trend
+      // Line chart - Monthly Cost Trend (filtered)
       const sortedMonths = Object.keys(monthlyCosts).sort();
       const monthlyData = sortedMonths.map(m => monthlyCosts[m]);
       const trendCtx = document.getElementById('costTrendChart').getContext('2d');
