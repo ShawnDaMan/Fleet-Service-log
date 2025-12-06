@@ -41,20 +41,20 @@
       text-align: center;
       margin: 20px auto;
     }
-    .nav-links a {
+    .nav-btn {
       display: inline-block;
-      margin: 0 10px;
       padding: 10px 20px;
-      background: rgba(255,255,255,0.2);
       color: white;
       text-decoration: none;
       border-radius: 6px;
       font-weight: 600;
-      transition: background 0.3s;
+      margin-right: 10px;
+      transition: background 0.2s;
     }
-    .nav-links a:hover {
-      background: rgba(255,255,255,0.3);
-    }
+    .nav-btn.vehicle { background: #27ae60; }
+    .nav-btn.charts { background: #2980b9; }
+    .nav-btn.key { background: #e67e22; }
+    .nav-btn.museum { background: #8e44ad; margin-right: 0; }
     .container {
       background: #fff;
       max-width: 95%;
@@ -131,9 +131,9 @@
   <h1>🏛️ Museum Car Upkeep</h1>
 
   <div class="nav-links">
-    <a href="index.html">← Service Log</a>
-    <a href="vehicle_readiness.html">🚗 Vehicle Readiness</a>
-    <a href="fleet_service_charts.html">📊 Charts</a>
+    <a href="index.html" class="nav-btn charts">← Service Log</a>
+    <a href="vehicle_readiness.html" class="nav-btn vehicle">🚗 Vehicle Readiness</a>
+    <a href="fleet_service_charts.html" class="nav-btn charts">📊 View Charts</a>
   </div>
 
   <div class="container">
