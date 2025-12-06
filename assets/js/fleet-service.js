@@ -200,12 +200,19 @@ function toggleOtherServiceType() {
 // ========================================
 function populateFilterVehicles() {
   const filterSelect = document.getElementById('filterVehicleId');
+  const filterServiceType = document.getElementById('filterServiceType');
   const vehicles = new Set();
-  // Use vehicle IDs from Totals by Vehicle table for filter dropdown
+  const serviceTypes = new Set();
+  // Use vehicle IDs and service types from Totals by Vehicle table for filter dropdowns
   const totalsTable = document.getElementById('totalsTable').getElementsByTagName('tbody')[0];
+  const serviceTable = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
   for (let i = 0; i < totalsTable.rows.length; i++) {
     const vehicleId = totalsTable.rows[i].cells[0].innerText.trim();
     if (vehicleId) vehicles.add(vehicleId);
+  }
+  for (let i = 0; i < serviceTable.rows.length; i++) {
+    const serviceType = serviceTable.rows[i].cells[2].innerText.trim();
+    if (serviceType) serviceTypes.add(serviceType);
   }
   const vehicleSelect = document.getElementById('vehicleIdSelect');
   Array.from(vehicleSelect.options).forEach(opt => {
@@ -221,11 +228,23 @@ function populateFilterVehicles() {
     option.textContent = vehicle;
     filterSelect.appendChild(option);
   });
+  // Populate service type filter
+  while (filterServiceType.options.length > 1) {
+    filterServiceType.remove(1);
+  }
+  const sortedTypes = Array.from(serviceTypes).sort();
+  sortedTypes.forEach(type => {
+    const option = document.createElement('option');
+    option.value = type;
+    option.textContent = type;
+    filterServiceType.appendChild(option);
+  });
 }
 
 function applyFilters() {
   const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
   const vehicleFilter = document.getElementById('filterVehicleId').value;
+  const serviceTypeFilter = document.getElementById('filterServiceType').value;
   const dateFrom = document.getElementById('filterDateFrom').value;
   const dateTo = document.getElementById('filterDateTo').value;
   let totalCost = 0;
@@ -234,10 +253,12 @@ function applyFilters() {
     const row = table.rows[i];
     if (row.classList.contains('total-row')) continue;
     const vehicleId = row.cells[1].innerText;
+    const serviceType = row.cells[2].innerText;
     const serviceDate = row.cells[3].innerText;
     const cost = parseCost(row.cells[4].innerText);
     let showRow = true;
     if (vehicleFilter && vehicleId !== vehicleFilter) showRow = false;
+    if (showRow && serviceTypeFilter && serviceType !== serviceTypeFilter) showRow = false;
     if (showRow && dateFrom && serviceDate < dateFrom) showRow = false;
     if (showRow && dateTo && serviceDate > dateTo) showRow = false;
     row.style.display = showRow ? '' : 'none';
