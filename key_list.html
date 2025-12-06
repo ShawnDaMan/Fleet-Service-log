@@ -126,15 +126,31 @@
       overflow-x: auto;
     }
   </style>
+  <style>
+    .nav-btn {
+      display: inline-block;
+      padding: 10px 20px;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      margin-right: 10px;
+      transition: background 0.2s;
+    }
+    .nav-btn.vehicle { background: #27ae60; }
+    .nav-btn.charts { background: #2980b9; }
+    .nav-btn.key { background: #e67e22; }
+    .nav-btn.museum { background: #8e44ad; margin-right: 0; }
+  </style>
 </head>
 <body>
   <h1>🔑 Master Key List</h1>
 
   <div class="nav-links">
-    <a href="index.html">← Service Log</a>
-    <a href="vehicle_readiness.html">🚗 Vehicle Readiness</a>
-    <a href="fleet_service_charts.html">📊 Charts</a>
-    <a href="museum_cars.html">🏛️ Museum Cars</a>
+    <a href="index.html" class="nav-btn charts">← Service Log</a>
+    <a href="vehicle_readiness.html" class="nav-btn vehicle">🚗 Vehicle Readiness</a>
+    <a href="fleet_service_charts.html" class="nav-btn charts">📊 View Charts</a>
+    <a href="museum_cars.html" class="nav-btn museum">🏛️ Museum Car Upkeep</a>
   </div>
 
   <div class="container">

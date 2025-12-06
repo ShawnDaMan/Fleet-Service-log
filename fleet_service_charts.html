@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <style>
+      .nav-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        margin-right: 10px;
+        transition: background 0.2s;
+      }
+      .nav-btn.charts { background: #2980b9; }
+      .nav-btn.vehicle { background: #27ae60; margin-right: 0; }
+    </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fleet Service Cost Charts</title>
@@ -35,8 +49,8 @@
 </head>
 <body>
   <div style="text-align: center; margin: 20px 0;">
-    <a href="index.html" style="display: inline-block; padding: 10px 20px; background: #2980b9; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; margin-right: 10px;">← Service Log</a>
-    <a href="vehicle_readiness.html" style="display: inline-block; padding: 10px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">🚗 Vehicle Readiness</a>
+    <a href="index.html" class="nav-btn charts">← Service Log</a>
+    <a href="vehicle_readiness.html" class="nav-btn vehicle">🚗 Vehicle Readiness</a>
   </div>
   <div style="text-align: center; margin-bottom: 20px;">
     <label for="serviceTypeFilter" style="font-weight: 600; color: #34495e; margin-right: 10px;">Filter by Service Type:</label>
