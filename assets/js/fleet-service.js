@@ -615,8 +615,15 @@ async function loadTableFromGoogleSheets() {
     // Collect unique vehicle IDs and service types
     const vehicleIds = new Set();
     const serviceTypes = new Set();
-    rows.slice(1).forEach((rowData, idx) => {
-      if (!rowData[0] || rowData[0] === '' || rowData[0]?.includes('TOTAL')) return;
+    // Sort by date descending (newest first)
+    const dataRows = rows.slice(1).filter(rowData => rowData[0] && rowData[0] !== '' && !rowData[0]?.includes('TOTAL'));
+    dataRows.sort((a, b) => {
+      // Date is column C (index 2)
+      const dateA = new Date(a[2] || '1900-01-01');
+      const dateB = new Date(b[2] || '1900-01-01');
+      return dateB - dateA;
+    });
+    dataRows.forEach((rowData, idx) => {
       vehicleIds.add(rowData[0]);
       if (rowData[1] && rowData[1] !== '') serviceTypes.add(rowData[1]);
       const newRow = table.insertRow();
