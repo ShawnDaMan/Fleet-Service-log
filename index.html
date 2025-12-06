@@ -202,6 +202,8 @@
     <tbody></tbody>
   </table>
 
+  <div id="pagingControls" style="text-align:center; margin: 24px 0 0 0;"></div>
+
   <div class="actions" style="display: none;">
     <button id="exportCsvBtn">Export to CSV</button>
     <input type="file" id="importCsvInput" accept=".csv" style="margin-left:16px;" />
@@ -221,6 +223,57 @@
     <tbody></tbody>
   </table>
   <script src="assets/js/fleet-service.js"></script>
+    <script>
+      // Paging logic for service table
+      let currentPage = 1;
+      const pageSize = 50;
+      let allServiceRows = [];
+
+      // Patch the table rendering to support paging
+      const origLoadTableFromGoogleSheets = window.loadTableFromGoogleSheets;
+      window.loadTableFromGoogleSheets = async function() {
+        await origLoadTableFromGoogleSheets();
+        // After loading, store all rows and show first page
+        const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+        allServiceRows = Array.from(table.rows).filter(row => !row.classList.contains('total-row') && !row.classList.contains('grand-total-row'));
+        showServicePage(1);
+      };
+
+      function showServicePage(page) {
+        const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+        // Remove all rows
+        Array.from(table.rows).forEach(row => table.removeChild(row));
+        // Add only rows for this page
+        const start = (page-1)*pageSize;
+        const end = start+pageSize;
+        allServiceRows.slice(start, end).forEach((row, i) => {
+          // Update row number for display
+          row.cells[0].innerText = start + i + 1;
+          table.appendChild(row);
+        });
+        // Add total row if present
+        const totalRow = allServiceRows.find(row => row.classList.contains('total-row'));
+        if (totalRow) table.appendChild(totalRow);
+        currentPage = page;
+        renderPagingControls();
+      }
+
+      function renderPagingControls() {
+        const totalRows = allServiceRows.length;
+        const totalPages = Math.ceil(totalRows / pageSize);
+        const controls = document.getElementById('pagingControls');
+        if (totalPages <= 1) { controls.innerHTML = ''; return; }
+        let html = '';
+        if (currentPage > 1) {
+          html += `<button onclick="showServicePage(${currentPage-1})" class="nav-btn charts" style="margin-right:12px;">Previous</button>`;
+        }
+        html += `<span style="font-weight:600; font-size:1.1rem; margin:0 16px;">Page ${currentPage} of ${totalPages}</span>`;
+        if (currentPage < totalPages) {
+          html += `<button onclick="showServicePage(${currentPage+1})" class="nav-btn charts" style="margin-left:12px;">Next</button>`;
+        }
+        controls.innerHTML = html;
+      }
+    </script>
   <footer style="width:100%;text-align:center;padding:24px 0 18px 0;color:#34495e;font-size:1rem;background:transparent; font-weight:bold;">
     <hr style="margin-bottom:16px;">
     <div>
