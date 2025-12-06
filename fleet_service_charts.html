@@ -114,7 +114,42 @@
 
   <script>
     function loadAndDisplayCharts() {
-      const data = JSON.parse(localStorage.getItem('fleetServiceLog') || '[]');
+      // Load data from Google Sheets
+      await new Promise((resolve, reject) => {
+        if (typeof gapi === 'undefined') {
+          const script = document.createElement('script');
+          script.src = 'https://apis.google.com/js/api.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        } else {
+          resolve();
+        }
+      });
+      await new Promise((resolve, reject) => {
+        gapi.load('client', {
+          callback: resolve,
+          onerror: reject
+        });
+      });
+      await gapi.client.init({
+        apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
+        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
+      });
+      const response = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
+        range: 'Sheet1!A:F'
+      });
+      const rows = response.result.values || [];
+      // Skip header row
+      const data = rows.slice(1).map(row => ({
+        vehicleId: row[0] || '',
+        serviceType: row[1] || '',
+        serviceDate: row[2] || '',
+        serviceCost: row[3] || '$0.00',
+        serviceCause: row[4] || '',
+        serviceNotes: row[5] || ''
+      })).filter(entry => entry.vehicleId && entry.vehicleId !== '' && !entry.vehicleId.includes('TOTAL'));
       
       // Calculate totals by vehicle
       const vehicleTotals = {};
@@ -283,8 +318,71 @@
     }
     
     window.onload = function() {
-      loadAndDisplayCharts();
-    };
-  </script>
-</body>
-</html>
+      async function loadAndDisplayCharts() {
+        // Load data from Google Sheets
+        await new Promise((resolve, reject) => {
+          if (typeof gapi === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://apis.google.com/js/api.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          } else {
+            resolve();
+          }
+        });
+        await new Promise((resolve, reject) => {
+          gapi.load('client', {
+            callback: resolve,
+            onerror: reject
+          });
+        });
+        await gapi.client.init({
+          apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
+          discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
+        });
+        const response = await gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
+          range: 'Sheet1!A:F'
+        });
+        const rows = response.result.values || [];
+        // Skip header row
+        const data = rows.slice(1).map(row => ({
+          vehicleId: row[0] || '',
+          serviceType: row[1] || '',
+          serviceDate: row[2] || '',
+          serviceCost: row[3] || '$0.00',
+          serviceCause: row[4] || '',
+          serviceNotes: row[5] || ''
+        })).filter(entry => entry.vehicleId && entry.vehicleId !== '' && !entry.vehicleId.includes('TOTAL'));
+        // Calculate totals by vehicle
+        const vehicleTotals = {};
+        const vehicleCount = {};
+        const serviceTypes = {};
+        const monthlyCosts = {};
+        data.forEach(entry => {
+          const vehicleId = entry.vehicleId;
+          const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
+          const serviceType = entry.serviceType;
+          // Vehicle totals
+          if (!vehicleTotals[vehicleId]) {
+            vehicleTotals[vehicleId] = 0;
+            vehicleCount[vehicleId] = 0;
+          }
+          vehicleTotals[vehicleId] += cost;
+          vehicleCount[vehicleId]++;
+          // Service type distribution
+          if (!serviceTypes[serviceType]) {
+            serviceTypes[serviceType] = 0;
+          }
+          serviceTypes[serviceType] += cost;
+          // Monthly costs
+          if (entry.serviceDate) {
+            const date = new Date(entry.serviceDate);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (!monthlyCosts[monthKey]) {
+              monthlyCosts[monthKey] = 0;
+            }
+            monthlyCosts[monthKey] += cost;
+          }
+        });
