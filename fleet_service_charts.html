@@ -43,6 +43,10 @@
       <div class="chart-title">Monthly Maintenance Costs Trend</div>
       <canvas id="costTrendChart"></canvas>
     </div>
+    <div class="chart-wrapper">
+      <div class="chart-title">Tires Cost Breakdown by Vehicle</div>
+      <canvas id="tiresBreakdownChart" style="max-height: 350px;"></canvas>
+    </div>
     <div style="margin-top: 30px; padding: 20px; background: #eaf1f7; border-radius: 8px;">
       <h3 style="margin-top: 0; color: #2c3e50; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">Cost Summary</h3>
       <table id="summaryTable" style="width: 100%; border-collapse: collapse;">
@@ -147,6 +151,28 @@
           datasets: [{ label: 'Total Service Cost (USD)', data: costs, backgroundColor: '#2980b9', borderColor: '#1a5a8a', borderWidth: 1, borderRadius: 6 }]
         },
         options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Cost (USD)' } }, x: { ticks: { maxRotation: 45, minRotation: 0 } } } }
+      });
+
+      // Tires breakdown chart
+      const tiresData = allData.filter(d => d.serviceType === 'Tires');
+      const tiresByVehicle = {};
+      tiresData.forEach(entry => {
+        const vehicleId = entry.vehicleId;
+        const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
+        if (!tiresByVehicle[vehicleId]) tiresByVehicle[vehicleId] = 0;
+        tiresByVehicle[vehicleId] += cost;
+      });
+      const tiresVehicles = Object.keys(tiresByVehicle).sort();
+      const tiresCosts = tiresVehicles.map(v => tiresByVehicle[v]);
+      const tiresCtx = document.getElementById('tiresBreakdownChart').getContext('2d');
+      tiresCtx.clearRect(0, 0, tiresCtx.canvas.width, tiresCtx.canvas.height);
+      new Chart(tiresCtx, {
+        type: 'pie',
+        data: {
+          labels: tiresVehicles,
+          datasets: [{ data: tiresCosts, backgroundColor: ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22', '#2980b9', '#27ae60'] }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: function(context) { return context.label + ': $' + context.parsed.toFixed(2); } } } } }
       });
       // Pie chart - Service Type Distribution
       const pieCtx = document.getElementById('serviceTypePieChart').getContext('2d');
