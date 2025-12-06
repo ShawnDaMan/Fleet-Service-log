@@ -203,7 +203,10 @@ function populateFilterVehicles() {
   const vehicles = new Set();
   const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
   for (let i = 0; i < table.rows.length; i++) {
-    const vehicleId = table.rows[i].cells[1].innerText;
+    const row = table.rows[i];
+    // Skip total rows and empty vehicle IDs
+    if (row.classList && row.classList.contains('total-row')) continue;
+    const vehicleId = row.cells[1].innerText.trim();
     if (vehicleId) vehicles.add(vehicleId);
   }
   const vehicleSelect = document.getElementById('vehicleIdSelect');
