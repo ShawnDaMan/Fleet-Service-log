@@ -169,6 +169,11 @@
         filter.appendChild(opt);
       });
       filter.value = summaryCurrentFilter;
+      // Attach event listener here for reliability
+      filter.onchange = function() {
+        summaryCurrentFilter = this.value;
+        renderChartsAndTable();
+      };
     }
 
     function renderChartsAndTable() {
@@ -289,17 +294,7 @@
 
 
     // Add event listener for summary filter after DOM is ready and filter is populated
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(() => {
-        const filter = document.getElementById('summaryServiceTypeFilter');
-        if (filter) {
-          filter.addEventListener('change', function() {
-            summaryCurrentFilter = this.value;
-            renderChartsAndTable();
-          });
-        }
-      }, 500);
-    });
+    // (Removed unreliable setTimeout event attachment)
 
     window.onload = function() { fetchDataAndInit(); };
   </script>
