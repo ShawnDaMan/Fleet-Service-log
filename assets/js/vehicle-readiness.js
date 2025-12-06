@@ -214,7 +214,7 @@ function displayReadinessCards(issuesByVehicle, allRows) {
   Array.from(allVehicles).sort().forEach(vehicleName => {
     const issues = issuesByVehicle[vehicleName] || [];
     const unreviewedIssues = issues.filter(issue => !issue.dateReviewed);
-    const highPriorityIssues = unreviewedIssues.filter(issue => issue.priority.includes('high'));
+    const highPriorityIssues = unreviewedIssues.filter(issue => (issue.priority || '').toLowerCase().includes('high'));
     
     const latestStatusOverride = issues
       .filter(issue => issue.manualStatus)
@@ -225,7 +225,7 @@ function displayReadinessCards(issuesByVehicle, allRows) {
     let cardClass = 'vehicle-card';
     
     const mediumHighPriorityIssues = unreviewedIssues.filter(issue => 
-      !issue.priority.includes('low')
+      !(issue.priority || '').toLowerCase().includes('low')
     );
     
     if (highPriorityIssues.length > 0) {
