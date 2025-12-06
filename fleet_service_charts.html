@@ -68,6 +68,31 @@
     let allData = [];
     let allServiceTypes = [];
     let currentFilter = 'All';
+    // Race-inspired color palette
+    const vehicleColorsPalette = [
+      '#D50000', // Ferrari Red
+      '#FF8700', // McLaren Papaya Orange
+      '#005AFF', // Williams Blue
+      '#009B3A', // Lotus Green
+      '#C0C0C0', // Mercedes Silver
+      '#FFD600', // Renault Yellow
+      '#6DCFF6', // Gulf Blue
+      '#FFFFFF', // Martini White
+      '#1C1C4E', // Red Bull Dark Blue
+      '#0033A0', // BMW Motorsport Blue
+      '#A7A9AC', // Porsche Racing Grey
+      '#006442', // Jaguar Racing Green
+      '#e74c3c', // Extra lively
+      '#3498db', // Extra lively
+      '#2ecc71', // Extra lively
+      '#f39c12', // Extra lively
+      '#9b59b6', // Extra lively
+      '#1abc9c', // Extra lively
+      '#34495e', // Extra lively
+      '#e67e22'  // Extra lively
+    ];
+    // Map vehicle IDs to colors
+    let vehicleColorMap = {};
 
     async function fetchDataAndInit() {
       await new Promise((resolve, reject) => {
@@ -139,18 +164,24 @@
           monthlyCosts[monthKey] += cost;
         }
       });
-      // Bar chart - Costs by Vehicle
+      // Assign colors to vehicles
       const sortedVehicles = Object.keys(vehicleTotals).sort();
+      vehicleColorMap = {};
+      sortedVehicles.forEach((vehicle, idx) => {
+        vehicleColorMap[vehicle] = vehicleColorsPalette[idx % vehicleColorsPalette.length];
+      });
       const costs = sortedVehicles.map(v => vehicleTotals[v]);
+      const vehicleBarColors = sortedVehicles.map(v => vehicleColorMap[v]);
+      // Bar chart - Costs by Vehicle
       const ctx = document.getElementById('costChart').getContext('2d');
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       new Chart(ctx, {
         type: 'bar',
         data: {
           labels: sortedVehicles,
-          datasets: [{ label: 'Total Service Cost (USD)', data: costs, backgroundColor: '#2980b9', borderColor: '#1a5a8a', borderWidth: 1, borderRadius: 6 }]
+          datasets: [{ label: 'Total Service Cost (USD)', data: costs, backgroundColor: vehicleBarColors, borderColor: vehicleBarColors, borderWidth: 1, borderRadius: 6 }]
         },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Cost (USD)' } }, x: { ticks: { maxRotation: 45, minRotation: 0 } } } }
+        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Cost (USD)' } }, x: { ticks: { maxRotation: 45, minRotation: 0 } } } }
       });
 
       // Tires breakdown chart
@@ -164,13 +195,14 @@
       });
       const tiresVehicles = Object.keys(tiresByVehicle).sort();
       const tiresCosts = tiresVehicles.map(v => tiresByVehicle[v]);
+      const tiresColors = tiresVehicles.map(v => vehicleColorMap[v] || '#888');
       const tiresCtx = document.getElementById('tiresBreakdownChart').getContext('2d');
       tiresCtx.clearRect(0, 0, tiresCtx.canvas.width, tiresCtx.canvas.height);
       new Chart(tiresCtx, {
         type: 'pie',
         data: {
           labels: tiresVehicles,
-          datasets: [{ data: tiresCosts, backgroundColor: ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22', '#2980b9', '#27ae60'] }]
+          datasets: [{ data: tiresCosts, backgroundColor: tiresColors }]
         },
         options: { responsive: true, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: function(context) { return context.label + ': $' + context.parsed.toFixed(2); } } } } }
       });
@@ -181,7 +213,7 @@
         type: 'pie',
         data: {
           labels: Object.keys(serviceTypes),
-          datasets: [{ data: Object.values(serviceTypes), backgroundColor: ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'] }]
+          datasets: [{ data: Object.values(serviceTypes), backgroundColor: vehicleColorsPalette }]
         },
         options: { responsive: true, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: function(context) { return context.label + ': $' + context.parsed.toFixed(2); } } } } }
       });
