@@ -591,9 +591,13 @@ async function loadTableFromGoogleSheets() {
     
     const rows = response.result.values || [];
     // Skip header row (index 0)
+    // Collect unique vehicle IDs and service types
+    const vehicleIds = new Set();
+    const serviceTypes = new Set();
     rows.slice(1).forEach((rowData, idx) => {
       if (!rowData[0] || rowData[0] === '' || rowData[0]?.includes('TOTAL')) return;
-      
+      vehicleIds.add(rowData[0]);
+      if (rowData[1] && rowData[1] !== '') serviceTypes.add(rowData[1]);
       const newRow = table.insertRow();
       newRow.insertCell(0).innerText = idx + 1; // Row number
       newRow.insertCell(1).innerText = rowData[0] || ''; // Vehicle ID from Sheet column A
@@ -602,11 +606,46 @@ async function loadTableFromGoogleSheets() {
       newRow.insertCell(4).innerText = rowData[3] || '$0.00'; // Cost from Sheet column D
       newRow.insertCell(5).innerText = rowData[4] || ''; // Cause from Sheet column E
       newRow.insertCell(6).innerText = rowData[5] || ''; // Notes from Sheet column F
-      
       const editCell = newRow.insertCell(7);
       editCell.appendChild(createEditButton());
       editCell.appendChild(createDeleteButton());
     });
+
+    // Populate Vehicle ID dropdown
+    const vehicleIdSelect = document.getElementById('vehicleIdSelect');
+    if (vehicleIdSelect) {
+      // Remove all options except the first ("Select Vehicle") and "other"
+      for (let i = vehicleIdSelect.options.length - 1; i >= 1; i--) {
+        if (vehicleIdSelect.options[i].value !== 'other') vehicleIdSelect.remove(i);
+      }
+      // Add sorted vehicle IDs
+      Array.from(vehicleIds).sort().forEach(id => {
+        if (![...vehicleIdSelect.options].some(opt => opt.value === id)) {
+          const opt = document.createElement('option');
+          opt.value = id;
+          opt.textContent = id;
+          vehicleIdSelect.insertBefore(opt, vehicleIdSelect.options[vehicleIdSelect.options.length - 1]);
+        }
+      });
+    }
+
+    // Populate Service Type dropdown
+    const serviceTypeSelect = document.getElementById('serviceTypeSelect');
+    if (serviceTypeSelect) {
+      // Remove all options except the first ("Select Service Type") and "other"
+      for (let i = serviceTypeSelect.options.length - 1; i >= 1; i--) {
+        if (serviceTypeSelect.options[i].value !== 'other') serviceTypeSelect.remove(i);
+      }
+      // Add sorted service types
+      Array.from(serviceTypes).sort().forEach(type => {
+        if (![...serviceTypeSelect.options].some(opt => opt.value === type)) {
+          const opt = document.createElement('option');
+          opt.value = type;
+          opt.textContent = type;
+          serviceTypeSelect.insertBefore(opt, serviceTypeSelect.options[serviceTypeSelect.options.length - 1]);
+        }
+      });
+    }
     
     // Show/hide buttons based on sign-in status
     if (isSignedIn) {
