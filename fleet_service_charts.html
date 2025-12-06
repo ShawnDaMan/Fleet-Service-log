@@ -138,11 +138,11 @@
       });
       const response = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
-        range: 'Sheet1!A:F'
+        range: 'Sheet1!A2:F10000'
       });
       const rows = response.result.values || [];
-      // Skip header row
-      const data = rows.slice(1).map(row => ({
+      // No header row, all rows are data
+      const data = rows.map(row => ({
         vehicleId: row[0] || '',
         serviceType: row[1] || '',
         serviceDate: row[2] || '',
