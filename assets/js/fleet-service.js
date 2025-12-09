@@ -576,11 +576,6 @@ async function saveTableToGoogleSheets() {
       ]);
     }
     
-    // Clear existing data first
-    await gapi.client.sheets.spreadsheets.values.clear({
-      spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
-      range: 'Sheet1!A2:F1000'
-    });
     
     // Write new data
     if (values.length > 0) {
