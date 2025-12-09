@@ -101,11 +101,11 @@ function updateSigninStatus(signedIn) {
     // Load data after sign-in
     loadTableFromGoogleSheets();
     
-    // Start auto-refresh every 60 seconds
+    // Start auto-refresh every 12 minutes
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     autoRefreshInterval = setInterval(() => {
       loadTableFromGoogleSheets();
-    }, 60000);
+    }, 720000);
   } else {
     if (signInBtn) signInBtn.style.display = 'inline-block';
     if (signOutBtn) signOutBtn.style.display = 'none';
