@@ -285,10 +285,23 @@
         options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
 
-      // Yearly Costs Trend (Line Chart, last 12 months)
+      // Yearly Costs Trend (Line Chart, last 12 months, robust date parsing)
       const allMonthlyTotals = {};
       allData.forEach(entry => {
-        const month = entry.serviceDate ? entry.serviceDate.slice(0, 7) : '';
+        let month = '';
+        if (entry.serviceDate) {
+          // Try to parse MM/DD/YYYY or YYYY-MM-DD
+          let d = entry.serviceDate.trim();
+          let parts;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+            // YYYY-MM-DD
+            month = d.slice(0, 7);
+          } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(d)) {
+            // MM/DD/YYYY
+            parts = d.split('/');
+            month = parts[2] + '-' + (parts[0].padStart(2, '0'));
+          }
+        }
         const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
         if (month) allMonthlyTotals[month] = (allMonthlyTotals[month] || 0) + cost;
       });
