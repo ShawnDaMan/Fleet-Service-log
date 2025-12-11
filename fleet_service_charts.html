@@ -285,14 +285,18 @@
         options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
 
-      // Monthly Maintenance Costs Trend (Line Chart)
+      // Yearly Costs Trend (Line Chart, last 12 months)
       const allMonthlyTotals = {};
       allData.forEach(entry => {
         const month = entry.serviceDate ? entry.serviceDate.slice(0, 7) : '';
         const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
         if (month) allMonthlyTotals[month] = (allMonthlyTotals[month] || 0) + cost;
       });
-      const allSortedMonths = Object.keys(allMonthlyTotals).sort();
+      let allSortedMonths = Object.keys(allMonthlyTotals).sort();
+      // Only keep the last 12 months
+      if (allSortedMonths.length > 12) {
+        allSortedMonths = allSortedMonths.slice(-12);
+      }
       const costTrendChartCtx = document.getElementById('costTrendChart').getContext('2d');
       const costTrendChartData = {
         labels: allSortedMonths,
