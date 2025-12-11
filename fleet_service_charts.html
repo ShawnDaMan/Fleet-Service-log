@@ -235,7 +235,7 @@
       window.costChartInstance = new Chart(costChartCtx, {
         type: 'bar',
         data: costChartData,
-        options: { responsive: true, plugins: { legend: { display: false } } }
+        options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
 
       // Service Type Distribution (Pie Chart)
@@ -257,7 +257,7 @@
       window.serviceTypePieChartInstance = new Chart(serviceTypePieChartCtx, {
         type: 'pie',
         data: serviceTypePieChartData,
-        options: { responsive: true }
+        options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
 
       // Tires Cost Breakdown by Vehicle (Bar Chart)
@@ -280,9 +280,9 @@
       };
       if (window.tiresBreakdownChartInstance) window.tiresBreakdownChartInstance.destroy();
       window.tiresBreakdownChartInstance = new Chart(tiresBreakdownChartCtx, {
-        type: 'bar',
+        type: 'pie',
         data: tiresBreakdownChartData,
-        options: { responsive: true, plugins: { legend: { display: false } } }
+        options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
 
       // Monthly Maintenance Costs Trend (Line Chart)
@@ -308,7 +308,7 @@
       window.costTrendChartInstance = new Chart(costTrendChartCtx, {
         type: 'line',
         data: costTrendChartData,
-        options: { responsive: true, plugins: { legend: { display: true } } }
+        options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
       // --- END RESTORE CHART.JS CHART RENDERING ---
     }
