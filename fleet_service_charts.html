@@ -238,18 +238,20 @@
         options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
 
-      // Service Type Distribution (Pie Chart)
-      const allServiceTypeCounts = {};
+      // Service Type Distribution (Pie Chart, total costs)
+      const allServiceTypeTotals = {};
       allData.forEach(entry => {
-        allServiceTypeCounts[entry.serviceType] = (allServiceTypeCounts[entry.serviceType] || 0) + 1;
+        const type = entry.serviceType;
+        const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
+        allServiceTypeTotals[type] = (allServiceTypeTotals[type] || 0) + cost;
       });
-      const allServiceTypeLabels = Object.keys(allServiceTypeCounts);
+      const allServiceTypeLabels = Object.keys(allServiceTypeTotals);
       const serviceTypePieChartCtx = document.getElementById('serviceTypePieChart').getContext('2d');
       const serviceTypePieChartData = {
         labels: allServiceTypeLabels,
         datasets: [{
-          label: 'Service Type',
-          data: allServiceTypeLabels.map(t => allServiceTypeCounts[t]),
+          label: 'Service Type Total Cost (USD)',
+          data: allServiceTypeLabels.map(t => allServiceTypeTotals[t]),
           backgroundColor: allServiceTypeLabels.map((t, i) => vehicleColorsPalette[i % vehicleColorsPalette.length]),
         }]
       };
