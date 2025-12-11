@@ -171,101 +171,20 @@
       filter.value = summaryCurrentFilter;
       // Attach event listener here for reliability
       filter.onchange = function() {
+        console.log('[Filter] Changed to:', this.value);
         summaryCurrentFilter = this.value;
         renderChartsAndTable();
       };
     }
 
     function renderChartsAndTable() {
-      // Charts always use allData
-      const filteredData = allData;
-      // Calculate totals by vehicle
-      const vehicleTotals = {};
-      const vehicleCount = {};
-      const serviceTypes = {};
-      const monthlyCosts = {};
-      filteredData.forEach(entry => {
-        const vehicleId = entry.vehicleId;
-        const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
-        const serviceType = entry.serviceType;
-        if (!vehicleTotals[vehicleId]) { vehicleTotals[vehicleId] = 0; vehicleCount[vehicleId] = 0; }
-        vehicleTotals[vehicleId] += cost;
-        vehicleCount[vehicleId]++;
-        if (!serviceTypes[serviceType]) { serviceTypes[serviceType] = 0; }
-        serviceTypes[serviceType] += cost;
-        if (entry.serviceDate) {
-          const date = new Date(entry.serviceDate);
-          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-          if (!monthlyCosts[monthKey]) { monthlyCosts[monthKey] = 0; }
-          monthlyCosts[monthKey] += cost;
-        }
-      });
-      // Assign colors to vehicles
-      const sortedVehicles = Object.keys(vehicleTotals).sort();
-      vehicleColorMap = {};
-      sortedVehicles.forEach((vehicle, idx) => {
-        vehicleColorMap[vehicle] = vehicleColorsPalette[idx % vehicleColorsPalette.length];
-      });
-      const costs = sortedVehicles.map(v => vehicleTotals[v]);
-      const vehicleBarColors = sortedVehicles.map(v => vehicleColorMap[v]);
-      // Bar chart - Costs by Vehicle (filtered)
-      const ctx = document.getElementById('costChart').getContext('2d');
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: sortedVehicles,
-          datasets: [{ label: 'Total Service Cost (USD)', data: costs, backgroundColor: vehicleBarColors, borderColor: vehicleBarColors, borderWidth: 1, borderRadius: 6 }]
-        },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Cost (USD)' } }, x: { ticks: { maxRotation: 45, minRotation: 0 } } } }
-      });
-
-      // Tires breakdown chart (filtered)
-      const tiresData = filteredData.filter(d => d.serviceType === 'Tires');
-      const tiresByVehicle = {};
-      tiresData.forEach(entry => {
-        const vehicleId = entry.vehicleId;
-        const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
-        if (!tiresByVehicle[vehicleId]) tiresByVehicle[vehicleId] = 0;
-        tiresByVehicle[vehicleId] += cost;
-      });
-      const tiresVehicles = Object.keys(tiresByVehicle).sort();
-      const tiresCosts = tiresVehicles.map(v => tiresByVehicle[v]);
-      const tiresColors = tiresVehicles.map(v => vehicleColorMap[v] || '#888');
-      const tiresCtx = document.getElementById('tiresBreakdownChart').getContext('2d');
-      tiresCtx.clearRect(0, 0, tiresCtx.canvas.width, tiresCtx.canvas.height);
-      new Chart(tiresCtx, {
-        type: 'pie',
-        data: {
-          labels: tiresVehicles,
-          datasets: [{ data: tiresCosts, backgroundColor: tiresColors }]
-        },
-        options: { responsive: true, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: function(context) { return context.label + ': $' + context.parsed.toFixed(2); } } } } }
-      });
-      // Pie chart - Service Type Distribution (filtered)
-      const pieCtx = document.getElementById('serviceTypePieChart').getContext('2d');
-      pieCtx.clearRect(0, 0, pieCtx.canvas.width, pieCtx.canvas.height);
-      new Chart(pieCtx, {
-        type: 'pie',
-        data: {
-          labels: Object.keys(serviceTypes),
-          datasets: [{ data: Object.values(serviceTypes), backgroundColor: vehicleColorsPalette }]
-        },
-        options: { responsive: true, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: function(context) { return context.label + ': $' + context.parsed.toFixed(2); } } } } }
-      });
-      // Line chart - Monthly Cost Trend (filtered)
-      const sortedMonths = Object.keys(monthlyCosts).sort();
-      const monthlyData = sortedMonths.map(m => monthlyCosts[m]);
-      const trendCtx = document.getElementById('costTrendChart').getContext('2d');
-      trendCtx.clearRect(0, 0, trendCtx.canvas.width, trendCtx.canvas.height);
-      new Chart(trendCtx, {
-        type: 'line',
-        data: { labels: sortedMonths, datasets: [{ label: 'Monthly Maintenance Costs', data: monthlyData, borderColor: '#2ecc71', backgroundColor: 'rgba(46, 204, 113, 0.1)', tension: 0.4, fill: true, borderWidth: 3 }] },
-        options: { responsive: true, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Cost (USD)' } }, x: { title: { display: true, text: 'Month' } } } }
-      });
-      // Populate summary table (filtered by summaryCurrentFilter)
+      // Only update the summary table (filtered by summaryCurrentFilter)
       const summaryTable = document.querySelector('#summaryTable tbody');
       summaryTable.innerHTML = '';
+      console.log('[Summary Filter] summaryCurrentFilter:', summaryCurrentFilter);
+      if (allData.length > 0) {
+        console.log('[Summary Filter] Example serviceType values:', allData.map(d => d.serviceType).filter((v,i,a) => a.indexOf(v) === i));
+      }
       let summaryFiltered = summaryCurrentFilter === 'All' ? allData : allData.filter(d => d.serviceType === summaryCurrentFilter);
       // Calculate totals by vehicle for filtered summary
       const summaryVehicleTotals = {};
