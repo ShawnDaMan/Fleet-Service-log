@@ -125,38 +125,53 @@
     let vehicleColorMap = {};
 
     async function fetchDataAndInit() {
-      await new Promise((resolve, reject) => {
-        if (typeof gapi === 'undefined') {
-          const script = document.createElement('script');
-          script.src = 'https://apis.google.com/js/api.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        } else { resolve(); }
-      });
-      await new Promise((resolve, reject) => {
-        gapi.load('client', { callback: resolve, onerror: reject });
-      });
-      await gapi.client.init({
-        apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
-        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
-      });
-      const response = await gapi.client.sheets.spreadsheets.values.get({
-        spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
-        range: 'Sheet1!A2:F10000'
-      });
-      const rows = response.result.values || [];
-      allData = rows.map(row => ({
-        vehicleId: row[0] || '',
-        serviceType: row[1] || '',
-        serviceDate: row[2] || '',
-        serviceCost: row[3] || '$0.00',
-        serviceCause: row[4] || '',
-        serviceNotes: row[5] || ''
-      })).filter(entry => entry.vehicleId && entry.vehicleId !== '' && !entry.vehicleId.includes('TOTAL'));
-      allServiceTypes = Array.from(new Set(allData.map(d => d.serviceType).filter(t => t))).sort();
-      populateSummaryServiceTypeFilter();
-      renderChartsAndTable();
+      try {
+        await new Promise((resolve, reject) => {
+          if (typeof gapi === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://apis.google.com/js/api.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          } else { resolve(); }
+        });
+        await new Promise((resolve, reject) => {
+          gapi.load('client', { callback: resolve, onerror: reject });
+        });
+        await gapi.client.init({
+          apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
+          discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
+        });
+        const response = await gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
+          range: 'Sheet1!A2:F10000'
+        });
+        const rows = response.result.values || [];
+        allData = rows.map(row => ({
+          vehicleId: row[0] || '',
+          serviceType: row[1] || '',
+          serviceDate: row[2] || '',
+          serviceCost: row[3] || '$0.00',
+          serviceCause: row[4] || '',
+          serviceNotes: row[5] || ''
+        })).filter(entry => entry.vehicleId && entry.vehicleId !== '' && !entry.vehicleId.includes('TOTAL'));
+        allServiceTypes = Array.from(new Set(allData.map(d => d.serviceType).filter(t => t))).sort();
+        populateSummaryServiceTypeFilter();
+        renderChartsAndTable();
+      } catch (err) {
+        // User-friendly error message for API token/login failures
+        const container = document.querySelector('.container') || document.body;
+        const errorDiv = document.createElement('div');
+        errorDiv.style.background = '#ffe0e0';
+        errorDiv.style.color = '#c0392b';
+        errorDiv.style.padding = '20px';
+        errorDiv.style.margin = '20px 0';
+        errorDiv.style.borderRadius = '8px';
+        errorDiv.style.fontWeight = 'bold';
+        errorDiv.innerText = 'Unable to load data due to an API login or token error. Please check your login status or API key and try again. If the problem persists, contact support.';
+        container.prepend(errorDiv);
+        console.error('API token/login failure:', err);
+      }
     }
 
     function populateSummaryServiceTypeFilter() {
