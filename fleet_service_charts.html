@@ -209,6 +209,108 @@
       totalRow.style.background = '#2980b9';
       totalRow.style.color = '#fff';
       totalRow.innerHTML = `<td style="padding: 10px; border: 1px solid #1a5a8a;">TOTAL</td><td style="padding: 10px; text-align: right; border: 1px solid #1a5a8a;">$${totalCost.toFixed(2)}</td><td style="padding: 10px; text-align: right; border: 1px solid #1a5a8a;">${totalEntries}</td>`;
+
+      // --- RESTORE CHART.JS CHART RENDERING ---
+      // Total Service Costs by Vehicle (Bar Chart)
+      const allVehicleTotals = {};
+      const allVehicleCount = {};
+      allData.forEach(entry => {
+        const vehicleId = entry.vehicleId;
+        const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
+        if (!allVehicleTotals[vehicleId]) { allVehicleTotals[vehicleId] = 0; allVehicleCount[vehicleId] = 0; }
+        allVehicleTotals[vehicleId] += cost;
+        allVehicleCount[vehicleId]++;
+      });
+      const allSortedVehicles = Object.keys(allVehicleTotals).sort();
+      const costChartCtx = document.getElementById('costChart').getContext('2d');
+      const costChartData = {
+        labels: allSortedVehicles,
+        datasets: [{
+          label: 'Total Cost (USD)',
+          data: allSortedVehicles.map(v => allVehicleTotals[v]),
+          backgroundColor: allSortedVehicles.map((v, i) => vehicleColorsPalette[i % vehicleColorsPalette.length]),
+        }]
+      };
+      if (window.costChartInstance) window.costChartInstance.destroy();
+      window.costChartInstance = new Chart(costChartCtx, {
+        type: 'bar',
+        data: costChartData,
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      // Service Type Distribution (Pie Chart)
+      const allServiceTypeCounts = {};
+      allData.forEach(entry => {
+        allServiceTypeCounts[entry.serviceType] = (allServiceTypeCounts[entry.serviceType] || 0) + 1;
+      });
+      const allServiceTypeLabels = Object.keys(allServiceTypeCounts);
+      const serviceTypePieChartCtx = document.getElementById('serviceTypePieChart').getContext('2d');
+      const serviceTypePieChartData = {
+        labels: allServiceTypeLabels,
+        datasets: [{
+          label: 'Service Type',
+          data: allServiceTypeLabels.map(t => allServiceTypeCounts[t]),
+          backgroundColor: allServiceTypeLabels.map((t, i) => vehicleColorsPalette[i % vehicleColorsPalette.length]),
+        }]
+      };
+      if (window.serviceTypePieChartInstance) window.serviceTypePieChartInstance.destroy();
+      window.serviceTypePieChartInstance = new Chart(serviceTypePieChartCtx, {
+        type: 'pie',
+        data: serviceTypePieChartData,
+        options: { responsive: true }
+      });
+
+      // Tires Cost Breakdown by Vehicle (Bar Chart)
+      const allTiresFiltered = allData.filter(entry => entry.serviceType.toLowerCase().includes('tire'));
+      const allTiresVehicleTotals = {};
+      allTiresFiltered.forEach(entry => {
+        const vehicleId = entry.vehicleId;
+        const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
+        allTiresVehicleTotals[vehicleId] = (allTiresVehicleTotals[vehicleId] || 0) + cost;
+      });
+      const allTiresSortedVehicles = Object.keys(allTiresVehicleTotals).sort();
+      const tiresBreakdownChartCtx = document.getElementById('tiresBreakdownChart').getContext('2d');
+      const tiresBreakdownChartData = {
+        labels: allTiresSortedVehicles,
+        datasets: [{
+          label: 'Tires Cost (USD)',
+          data: allTiresSortedVehicles.map(v => allTiresVehicleTotals[v]),
+          backgroundColor: allTiresSortedVehicles.map((v, i) => vehicleColorsPalette[i % vehicleColorsPalette.length]),
+        }]
+      };
+      if (window.tiresBreakdownChartInstance) window.tiresBreakdownChartInstance.destroy();
+      window.tiresBreakdownChartInstance = new Chart(tiresBreakdownChartCtx, {
+        type: 'bar',
+        data: tiresBreakdownChartData,
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      // Monthly Maintenance Costs Trend (Line Chart)
+      const allMonthlyTotals = {};
+      allData.forEach(entry => {
+        const month = entry.serviceDate ? entry.serviceDate.slice(0, 7) : '';
+        const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
+        if (month) allMonthlyTotals[month] = (allMonthlyTotals[month] || 0) + cost;
+      });
+      const allSortedMonths = Object.keys(allMonthlyTotals).sort();
+      const costTrendChartCtx = document.getElementById('costTrendChart').getContext('2d');
+      const costTrendChartData = {
+        labels: allSortedMonths,
+        datasets: [{
+          label: 'Monthly Cost (USD)',
+          data: allSortedMonths.map(m => allMonthlyTotals[m]),
+          borderColor: '#2980b9',
+          backgroundColor: 'rgba(41,128,185,0.2)',
+          fill: true,
+        }]
+      };
+      if (window.costTrendChartInstance) window.costTrendChartInstance.destroy();
+      window.costTrendChartInstance = new Chart(costTrendChartCtx, {
+        type: 'line',
+        data: costTrendChartData,
+        options: { responsive: true, plugins: { legend: { display: true } } }
+      });
+      // --- END RESTORE CHART.JS CHART RENDERING ---
     }
 
 
