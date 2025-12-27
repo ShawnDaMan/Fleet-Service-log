@@ -99,7 +99,9 @@ function updateSigninStatus(signedIn) {
     if (summaryCards) summaryCards.style.display = 'grid';
     
     // Load data after sign-in
-    loadTableFromGoogleSheets();
+    loadTableFromGoogleSheets().then(() => {
+      populateFilterVehicles();
+    });
     
     // Start auto-refresh every 12 minutes
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
@@ -120,9 +122,13 @@ function updateSigninStatus(signedIn) {
     }
     
     // Try to load data in read-only mode
-    loadTableFromGoogleSheets().catch(() => {
-      console.log('Not signed in - viewing in read-only mode');
-    });
+    loadTableFromGoogleSheets()
+      .then(() => {
+        populateFilterVehicles();
+      })
+      .catch(() => {
+        console.log('Not signed in - viewing in read-only mode');
+      });
   }
 }
 
