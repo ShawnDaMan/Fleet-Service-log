@@ -314,12 +314,20 @@ function applyFilters() {
 
 function clearFilters() {
   document.getElementById('filterVehicleId').value = '';
+  document.getElementById('filterServiceType').value = '';
   document.getElementById('filterDateFrom').value = '';
   document.getElementById('filterDateTo').value = '';
   const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
   for (let i = 0; i < table.rows.length; i++) table.rows[i].style.display = '';
   const existingTotalRow = table.querySelector('.total-row');
   if (existingTotalRow) existingTotalRow.remove();
+  // Restore allServiceRows and reset paging if used
+  if (typeof window.allServiceRows !== 'undefined') {
+    window.allServiceRows = Array.from(table.rows).filter(row => !row.classList.contains('total-row') && !row.classList.contains('grand-total-row'));
+    if (typeof window.showServicePage === 'function') {
+      window.showServicePage(1);
+    }
+  }
 }
 
 // ========================================
