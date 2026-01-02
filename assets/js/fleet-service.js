@@ -263,12 +263,22 @@ function applyFilters() {
     const vehicleId = row.cells[1].innerText;
     const serviceType = row.cells[2].innerText;
     const serviceDate = row.cells[3].innerText;
+    // Convert MM/DD/YYYY to YYYY-MM-DD for comparison
+    let serviceDateISO = '';
+    if (serviceDate && serviceDate.includes('/')) {
+      const parts = serviceDate.split('/');
+      if (parts.length === 3) {
+        serviceDateISO = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+      }
+    } else {
+      serviceDateISO = serviceDate;
+    }
     const cost = parseCost(row.cells[4].innerText);
     let showRow = true;
     if (vehicleFilter && vehicleId !== vehicleFilter) showRow = false;
     if (showRow && serviceTypeFilter && serviceType !== serviceTypeFilter) showRow = false;
-    if (showRow && dateFrom && serviceDate < dateFrom) showRow = false;
-    if (showRow && dateTo && serviceDate > dateTo) showRow = false;
+    if (showRow && dateFrom && serviceDateISO < dateFrom) showRow = false;
+    if (showRow && dateTo && serviceDateISO > dateTo) showRow = false;
     row.style.display = showRow ? '' : 'none';
     if (showRow) {
       totalCost += cost;
