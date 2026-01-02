@@ -255,6 +255,8 @@ function applyFilters() {
   const dateTo = document.getElementById('filterDateTo').value;
   let totalCost = 0;
   let visibleCount = 0;
+  // Filter rows and update display
+  let filteredRows = [];
   for (let i = 0; i < table.rows.length; i++) {
     const row = table.rows[i];
     if (row.classList.contains('total-row')) continue;
@@ -268,8 +270,13 @@ function applyFilters() {
     if (showRow && dateFrom && serviceDate < dateFrom) showRow = false;
     if (showRow && dateTo && serviceDate > dateTo) showRow = false;
     row.style.display = showRow ? '' : 'none';
-    if (showRow) { totalCost += cost; visibleCount++; }
+    if (showRow) {
+      totalCost += cost;
+      visibleCount++;
+      filteredRows.push(row);
+    }
   }
+  // Remove any existing total row
   const existingTotalRow = table.querySelector('.total-row');
   if (existingTotalRow) existingTotalRow.remove();
   if (visibleCount > 0) {
@@ -285,6 +292,13 @@ function applyFilters() {
     totalRow.insertCell(5).innerText = '';
     totalRow.insertCell(6).innerText = '';
     totalRow.insertCell(7).innerText = '';
+  }
+  // Update paging to only use filtered rows
+  if (typeof window.allServiceRows !== 'undefined') {
+    window.allServiceRows = filteredRows;
+    if (typeof window.showServicePage === 'function') {
+      window.showServicePage(1);
+    }
   }
 }
 
