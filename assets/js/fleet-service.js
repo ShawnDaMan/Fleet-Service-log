@@ -1,42 +1,46 @@
-// Shared JS extracted from fleet_service_log pages
-// Sections: utilities, filters, events, add/edit, totals, storage, CSV import/export, init
+// Fleet Service Log - Main Frontend Script
+// Purpose: Handles all frontend logic for the Fleet Service Log web app.
+// Sections: Google Sheets integration, UI logic, filters, events, add/edit, totals, storage, CSV import/export, and initialization.
+// Dependencies: Google Sheets API, Google Identity Services, HTML structure (IDs/classes)
 
-// Google Sheets Configuration
+// --- Google Sheets API Configuration ---
+// Holds all credentials and settings for Google Sheets access
 const GOOGLE_SHEETS_CONFIG = {
-  apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
-  clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com',
-  spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q',
-  range: 'Sheet1!A:F',
-  discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-  scope: 'https://www.googleapis.com/auth/spreadsheets'
+  apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk', // Google API key for Sheets
+  clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com', // OAuth2 client ID
+  spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q', // Main Fleet Service Log sheet
+  range: 'Sheet1!A:F', // Data range for service log
+  discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'], // API discovery
+  scope: 'https://www.googleapis.com/auth/spreadsheets' // Full Sheets access
 };
 
-let gapiInitialized = false;
-let isSignedIn = false;
-let accessToken = null;
-let tokenClient = null;
-let autoRefreshInterval = null;
+// --- Global State Variables ---
+let gapiInitialized = false; // True after Google API is loaded
+let isSignedIn = false;      // True if user is signed in
+let accessToken = null;      // Stores Google OAuth access token
+let tokenClient = null;      // Google Identity Services token client
+let autoRefreshInterval = null; // Interval for auto-refreshing data
 
-// Initialize Google API with new GIS
+// --- Google API Initialization ---
+// Loads Google API and sets up OAuth token client. (Legacy: used to restore session from localStorage)
 function initGoogleAPI() {
   return new Promise((resolve, reject) => {
-    if (gapiInitialized) {
+    if (gapiInitialized) { // Already initialized
       resolve();
       return;
     }
-    if (typeof gapi === 'undefined') {
+    if (typeof gapi === 'undefined') { // Google API not loaded
       reject(new Error('Google API not loaded'));
       return;
     }
-    
+    // Load Google API client
     gapi.load('client', async () => {
       try {
         await gapi.client.init({
           apiKey: GOOGLE_SHEETS_CONFIG.apiKey,
           discoveryDocs: GOOGLE_SHEETS_CONFIG.discoveryDocs
         });
-        
-        // Initialize Google Identity Services token client
+        // Set up OAuth token client for sign-in
         if (typeof google !== 'undefined' && google.accounts) {
           tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: GOOGLE_SHEETS_CONFIG.clientId,
@@ -47,34 +51,29 @@ function initGoogleAPI() {
                 return;
               }
               accessToken = response.access_token;
-              // Store token with expiry (8 hours)
-              const expiryTime = Date.now() + (8 * 3600 * 1000);
-              localStorage.setItem('google_access_token', accessToken);
-              localStorage.setItem('google_token_expiry', expiryTime.toString());
+              // Store token and expiry in localStorage (8 hours) [LEGACY: Commented out]
+              // const expiryTime = Date.now() + (8 * 3600 * 1000);
+              // localStorage.setItem('google_access_token', accessToken);
+              // localStorage.setItem('google_token_expiry', expiryTime.toString());
               gapi.client.setToken({access_token: accessToken});
-              updateSigninStatus(true);
+              updateSigninStatus(true); // Update UI for signed-in state
             }
           });
         }
-        
         gapiInitialized = true;
-        
-        // Check for stored token
-        const storedToken = localStorage.getItem('google_access_token');
-        const tokenExpiry = localStorage.getItem('google_token_expiry');
-        
-        if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-          // Token still valid, restore session
-          accessToken = storedToken;
-          gapi.client.setToken({access_token: accessToken});
-          updateSigninStatus(true);
-        } else {
-          // Clear expired token
-          localStorage.removeItem('google_access_token');
-          localStorage.removeItem('google_token_expiry');
-          updateSigninStatus(false);
-        }
-        
+        // Restore session if token is still valid
+        // const storedToken = localStorage.getItem('google_access_token');
+        // const tokenExpiry = localStorage.getItem('google_token_expiry');
+        // if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+        //   accessToken = storedToken;
+        //   gapi.client.setToken({access_token: accessToken});
+        //   updateSigninStatus(true);
+        // } else {
+        //   // Clear expired token
+        //   localStorage.removeItem('google_access_token');
+        //   localStorage.removeItem('google_token_expiry');
+        //   updateSigninStatus(false);
+        // }
         resolve();
       } catch (error) {
         reject(error);
@@ -83,45 +82,50 @@ function initGoogleAPI() {
   });
 }
 
+// --- Update UI and Data State on Sign-in/Sign-out ---
+// Controls visibility of UI elements and triggers data loading based on sign-in status.
+// Also manages auto-refresh interval for live data.
 function updateSigninStatus(signedIn) {
   isSignedIn = signedIn;
-  const signInBtn = document.getElementById('signInBtn');
-  const signOutBtn = document.getElementById('signOutBtn');
-  const serviceForm = document.getElementById('serviceForm');
-  const actionsDiv = document.querySelector('.actions');
-  const summaryCards = document.getElementById('summaryCards');
+  // Get references to key UI elements
+  const signInBtn = document.getElementById('signInBtn'); // Google sign-in button
+  const signOutBtn = document.getElementById('signOutBtn'); // Google sign-out button
+  const serviceForm = document.getElementById('serviceForm'); // Add service form
+  const actionsDiv = document.querySelector('.actions'); // CSV import/export controls
+  const summaryCards = document.getElementById('summaryCards'); // Dashboard summary cards
   
   if (signedIn) {
+    // Show/hide UI for signed-in state
     if (signInBtn) signInBtn.style.display = 'none';
     if (signOutBtn) signOutBtn.style.display = 'inline-block';
     if (serviceForm) serviceForm.style.display = 'block';
     if (actionsDiv) actionsDiv.style.display = 'block';
     if (summaryCards) summaryCards.style.display = 'grid';
     
-    // Load data after sign-in
+    // Load data from Google Sheets and update filters
     loadTableFromGoogleSheets().then(() => {
       populateFilterVehicles();
     });
     
-    // Start auto-refresh every 12 minutes
+    // Start auto-refresh every 12 minutes (720,000 ms)
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     autoRefreshInterval = setInterval(() => {
       loadTableFromGoogleSheets();
     }, 720000);
   } else {
+    // Show/hide UI for signed-out (read-only) state
     if (signInBtn) signInBtn.style.display = 'inline-block';
     if (signOutBtn) signOutBtn.style.display = 'none';
     if (serviceForm) serviceForm.style.display = 'none';
     if (actionsDiv) actionsDiv.style.display = 'none';
     if (summaryCards) summaryCards.style.display = 'none';
     
-    // Stop auto-refresh
+    // Stop auto-refresh if running
     if (autoRefreshInterval) {
       clearInterval(autoRefreshInterval);
       autoRefreshInterval = null;
     }
-    
-    // Try to load data in read-only mode
+    // Try to load data in read-only mode (no sign-in required)
     loadTableFromGoogleSheets()
       .then(() => {
         populateFilterVehicles();
@@ -132,12 +136,16 @@ function updateSigninStatus(signedIn) {
   }
 }
 
+// --- Google Sign-in Handler ---
+// Triggers OAuth flow to request access token from Google
 function handleSignIn() {
   if (tokenClient) {
     tokenClient.requestAccessToken({prompt: 'consent'});
   }
 }
 
+// --- Google Sign-out Handler ---
+// Revokes access token, clears localStorage, and updates UI to signed-out state
 function handleSignOut() {
   if (accessToken) {
     google.accounts.oauth2.revoke(accessToken, () => {
@@ -146,21 +154,24 @@ function handleSignOut() {
     accessToken = null;
     gapi.client.setToken(null);
   }
-  // Clear stored token
-  localStorage.removeItem('google_access_token');
-  localStorage.removeItem('google_token_expiry');
+  // Remove token from localStorage [LEGACY: Commented out]
+  // localStorage.removeItem('google_access_token');
+  // localStorage.removeItem('google_token_expiry');
   updateSigninStatus(false);
 }
 
-// Helpers
+// --- Helper Functions ---
+// parseCost: Converts a string (e.g. "$1,234.56") to a float number. Used for cost calculations.
 function parseCost(str) {
   return parseFloat(String(str).replace(/[^0-9.-]+/g, '')) || 0;
 }
 
+// formatCost: Formats a number as a currency string (e.g. 1234.56 → "$1,234.56")
 function formatCost(n) {
   return '$' + Number(n || 0).toFixed(2);
 }
 
+// createEditButton: Returns a styled Edit button element for table rows
 function createEditButton() {
   const btn = document.createElement('button');
   btn.textContent = 'Edit';
@@ -168,6 +179,7 @@ function createEditButton() {
   return btn;
 }
 
+// createSaveButton: Returns a styled Save button element for table rows
 function createSaveButton() {
   const btn = document.createElement('button');
   btn.textContent = 'Save';
@@ -175,6 +187,7 @@ function createSaveButton() {
   return btn;
 }
 
+// createDeleteButton: Returns a styled Delete button element for table rows
 function createDeleteButton() {
   const btn = document.createElement('button');
   btn.textContent = 'Delete';
@@ -187,6 +200,7 @@ function createDeleteButton() {
 // ========================================
 // SECTION 1: UTILITY FUNCTIONS - Show/Hide "Other" inputs
 // ========================================
+// Shows or hides the "Other" vehicle input based on dropdown selection
 function toggleOtherVehicle() {
   const select = document.getElementById('vehicleIdSelect');
   const otherInput = document.getElementById('vehicleIdOther');
@@ -194,6 +208,7 @@ function toggleOtherVehicle() {
   otherInput.required = select.value === 'other';
 }
 
+// Shows or hides the "Other" service type input based on dropdown selection
 function toggleOtherServiceType() {
   const select = document.getElementById('serviceTypeSelect');
   const otherInput = document.getElementById('serviceTypeOther');
@@ -204,6 +219,7 @@ function toggleOtherServiceType() {
 // ========================================
 // SECTION 2: FILTER FUNCTIONS - Populate and apply filters
 // ========================================
+// Populates the filter dropdowns for Vehicle ID and Service Type using data from the tables
 function populateFilterVehicles() {
   const filterSelect = document.getElementById('filterVehicleId');
   const filterServiceType = document.getElementById('filterServiceType');
@@ -220,10 +236,12 @@ function populateFilterVehicles() {
     const serviceType = serviceTable.rows[i].cells[2].innerText.trim();
     if (serviceType) serviceTypes.add(serviceType);
   }
+  // Add any vehicles from the add form dropdown
   const vehicleSelect = document.getElementById('vehicleIdSelect');
   Array.from(vehicleSelect.options).forEach(opt => {
     if (opt.value && opt.value !== 'other') vehicles.add(opt.value);
   });
+  // Clear and repopulate vehicle filter dropdown
   while (filterSelect.options.length > 1) {
     filterSelect.remove(1);
   }
@@ -315,12 +333,14 @@ function clearFilters() {
 // ========================================
 // SECTION 3: EVENT LISTENERS
 // ========================================
+// Set up event listeners for dropdowns and filter buttons after DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-  // Use event delegation for table edit/save if needed later
+  // Show/hide "Other" input fields when dropdowns change
   const vehicleSelect = document.getElementById('vehicleIdSelect');
   if (vehicleSelect) vehicleSelect.addEventListener('change', toggleOtherVehicle);
   const serviceTypeSelect = document.getElementById('serviceTypeSelect');
   if (serviceTypeSelect) serviceTypeSelect.addEventListener('change', toggleOtherServiceType);
+  // Filter and clear filter buttons
   const filterBtn = document.getElementById('filterBtn');
   if (filterBtn) filterBtn.addEventListener('click', applyFilters);
   const clearFilterBtn = document.getElementById('clearFilterBtn');
@@ -330,14 +350,17 @@ document.addEventListener('DOMContentLoaded', function() {
 // ========================================
 // SECTION 4: ADD SERVICE
 // ========================================
+// Handles form submission for adding a new service record
 document.addEventListener('submit', function(e) {
   const target = e.target;
   if (!target || target.id !== 'serviceForm') return;
   e.preventDefault();
+  // Get vehicle ID (handle "Other" case)
   const vehicleSelect = document.getElementById('vehicleIdSelect');
   let vehicleId = vehicleSelect.value;
   if (vehicleId === 'other') {
     vehicleId = document.getElementById('vehicleIdOther').value;
+    // Add new vehicle to dropdown if not present
     if (vehicleId && !Array.from(vehicleSelect.options).some(opt => opt.value === vehicleId)) {
       const newOption = document.createElement('option');
       newOption.value = vehicleId;
@@ -345,10 +368,12 @@ document.addEventListener('submit', function(e) {
       vehicleSelect.insertBefore(newOption, vehicleSelect.options[vehicleSelect.options.length - 1]);
     }
   }
+  // Get service type (handle "Other" case)
   const serviceTypeSelect = document.getElementById('serviceTypeSelect');
   let serviceType = serviceTypeSelect.value;
   if (serviceType === 'other') {
     serviceType = document.getElementById('serviceTypeOther').value;
+    // Add new service type to dropdown if not present
     if (serviceType && !Array.from(serviceTypeSelect.options).some(opt => opt.value === serviceType)) {
       const newOption = document.createElement('option');
       newOption.value = serviceType;
@@ -356,10 +381,12 @@ document.addEventListener('submit', function(e) {
       serviceTypeSelect.insertBefore(newOption, serviceTypeSelect.options[serviceTypeSelect.options.length - 1]);
     }
   }
+  // Get other form values
   const serviceDate = document.getElementById('serviceDate').value;
   const serviceCost = Number(document.getElementById('serviceCost').value).toFixed(2);
   const serviceCause = document.getElementById('serviceCause').value;
   const serviceNotes = document.getElementById('serviceNotes').value;
+  // Add new row to service table
   const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
   const rowCount = table.rows.length + 1;
   const newRow = table.insertRow();
@@ -373,12 +400,13 @@ document.addEventListener('submit', function(e) {
   const editCell = newRow.insertCell(7);
   editCell.appendChild(createEditButton());
   editCell.appendChild(createDeleteButton());
+  // Reset form and update UI
   document.getElementById('serviceForm').reset();
   toggleOtherVehicle();
   toggleOtherServiceType();
   updateTotals();
   populateFilterVehicles();
-  saveTableToStorage();
+  // saveTableToStorage(); // [LEGACY: Commented out]
 });
 
 // ========================================
@@ -413,7 +441,7 @@ function saveRow(row) {
   editCell.appendChild(createEditButton());
   editCell.appendChild(createDeleteButton());
   updateTotals();
-  saveTableToStorage();
+  // saveTableToStorage(); // [LEGACY: Commented out]
 }
 
 function deleteRow(row) {
@@ -428,7 +456,7 @@ function deleteRow(row) {
     }
     updateTotals();
     populateFilterVehicles();
-    saveTableToStorage();
+    // saveTableToStorage(); // [LEGACY: Commented out]
   }
 }
 
@@ -714,32 +742,32 @@ async function loadTableFromGoogleSheets() {
   }
 }
 
-// Keep localStorage functions for backward compatibility / offline mode
-function saveTableToStorage() {
-  const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
-  const data = [];
-  for (let i = 0; i < table.rows.length; i++) {
-    const row = table.rows[i];
-    if (row.classList.contains('total-row') || row.classList.contains('grand-total-row')) continue;
-    data.push({
-      number: row.cells[0].innerText,
-      vehicleId: row.cells[1].innerText,
-      serviceType: row.cells[2].innerText,
-      serviceDate: row.cells[3].innerText,
-      serviceCost: row.cells[4].innerText,
-      serviceCause: row.cells[5].innerText,
-      serviceNotes: row.cells[6].innerText
-    });
-  }
-  localStorage.setItem('fleetServiceLog', JSON.stringify(data));
-  // Also save to Google Sheets
-  saveTableToGoogleSheets();
-}
+// [LEGACY: The following functions are disabled.]
+// function saveTableToStorage() {
+//   const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+//   const data = [];
+//   for (let i = 0; i < table.rows.length; i++) {
+//     const row = table.rows[i];
+//     if (row.classList.contains('total-row') || row.classList.contains('grand-total-row')) continue;
+//     data.push({
+//       number: row.cells[0].innerText,
+//       vehicleId: row.cells[1].innerText,
+//       serviceType: row.cells[2].innerText,
+//       serviceDate: row.cells[3].innerText,
+//       serviceCost: row.cells[4].innerText,
+//       serviceCause: row.cells[5].innerText,
+//       serviceNotes: row.cells[6].innerText
+//     });
+//   }
+//   localStorage.setItem('fleetServiceLog', JSON.stringify(data));
+//   // Also save to Google Sheets
+//   saveTableToGoogleSheets();
+// }
 
-function loadTableFromStorage() {
-  // Load from Google Sheets instead
-  loadTableFromGoogleSheets();
-}
+// function loadTableFromStorage() {
+//   // Load from Google Sheets instead
+//   loadTableFromGoogleSheets();
+// }
 
 // ========================================
 // SECTION 8: EXPORT/IMPORT CSV
@@ -747,7 +775,7 @@ function loadTableFromStorage() {
 document.addEventListener('click', function(e) {
   if (!e.target) return;
   if (e.target.id === 'exportCsvBtn') {
-    const data = JSON.parse(localStorage.getItem('fleetServiceLog') || '[]');
+    // const data = JSON.parse(localStorage.getItem('fleetServiceLog') || '[]'); // [LEGACY: Commented out]
     let csv = 'Row,Vehicle ID,Service Type,Date,Cost (USD),Cause,Notes\n';
     data.forEach((r, i) => {
       const rowData = [i+1, r.vehicleId, r.serviceType, r.serviceDate, r.serviceCost, r.serviceCause, r.serviceNotes];
