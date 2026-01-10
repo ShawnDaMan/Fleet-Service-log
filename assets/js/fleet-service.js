@@ -21,6 +21,11 @@ let accessToken = null;      // Stores Google OAuth access token
 let tokenClient = null;      // Google Identity Services token client
 let autoRefreshInterval = null; // Interval for auto-refreshing data
 
+// --- Add global state for user email and domain restriction ---
+let userEmail = null;        // Stores signed-in user's email
+let isAuthorizedUser = false; // True if user is in Authorized Users sheet
+let authorizedEmails = [];   // List of authorized emails from sheet
+
 // --- Google API Initialization ---
 // Loads Google API and sets up OAuth token client. (Legacy: used to restore session from localStorage)
 function initGoogleAPI() {
@@ -82,31 +87,93 @@ function initGoogleAPI() {
   });
 }
 
+// --- Helper to fetch Google user email ---
+async function fetchGoogleUserEmail(token) {
+  if (!token) return null;
+  try {
+    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.email || null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // --- Update UI and Data State on Sign-in/Sign-out ---
 // Controls visibility of UI elements and triggers data loading based on sign-in status.
 // Also manages auto-refresh interval for live data.
-function updateSigninStatus(signedIn) {
+async function updateSigninStatus(signedIn) {
   isSignedIn = signedIn;
+  userEmail = null;
+  isAuthorizedUser = false;
+  authorizedEmails = [];
   // Get references to key UI elements
   const signInBtn = document.getElementById('signInBtn'); // Google sign-in button
   const signOutBtn = document.getElementById('signOutBtn'); // Google sign-out button
   const serviceForm = document.getElementById('serviceForm'); // Add service form
   const actionsDiv = document.querySelector('.actions'); // CSV import/export controls
   const summaryCards = document.getElementById('summaryCards'); // Dashboard summary cards
-  
+
+  // Helper to set all edit/export UI to read-only
+  function setViewOnlyMode() {
+    if (serviceForm) serviceForm.style.display = 'none';
+    // Hide all edit/delete buttons
+    document.querySelectorAll('.edit-btn, .delete-btn').forEach(btn => btn.style.display = 'none');
+    // Hide CSV import/export
+    if (actionsDiv) actionsDiv.style.display = 'none';
+  }
+
+  // Helper to fetch authorized emails from Google Sheet
+  async function fetchAuthorizedEmails() {
+    try {
+      await initGoogleAPI();
+      const response = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk',
+        range: 'Authorized Users!A:A'
+      });
+      const rows = response.result.values || [];
+      return rows.map(r => (r[0] || '').trim().toLowerCase()).filter(email => email);
+    } catch (e) {
+      return [];
+    }
+  }
+
   if (signedIn) {
+    // Fetch user email using Google OAuth2 userinfo endpoint
+    userEmail = await fetchGoogleUserEmail(accessToken);
+    // Fetch authorized emails from sheet
+    authorizedEmails = await fetchAuthorizedEmails();
+    isAuthorizedUser = userEmail && authorizedEmails.includes(userEmail.toLowerCase());
+
     // Show/hide UI for signed-in state
     if (signInBtn) signInBtn.style.display = 'none';
     if (signOutBtn) signOutBtn.style.display = 'inline-block';
-    if (serviceForm) serviceForm.style.display = 'block';
-    if (actionsDiv) actionsDiv.style.display = 'block';
     if (summaryCards) summaryCards.style.display = 'grid';
-    
+
+    if (isAuthorizedUser) {
+      if (serviceForm) serviceForm.style.display = 'block';
+      if (actionsDiv) actionsDiv.style.display = 'block';
+    } else {
+      setViewOnlyMode();
+      // Optionally show a warning
+      if (!document.getElementById('viewOnlyMsg')) {
+        const msg = document.createElement('div');
+        msg.id = 'viewOnlyMsg';
+        msg.textContent = 'View-only: You are not authorized to edit or export data.';
+        msg.style.color = 'red';
+        msg.style.margin = '10px 0';
+        (serviceForm?.parentElement || document.body).insertBefore(msg, serviceForm);
+      }
+    }
+
     // Load data from Google Sheets and update filters
     loadTableFromGoogleSheets().then(() => {
       populateFilterVehicles();
     });
-    
+
     // Start auto-refresh every 12 minutes (720,000 ms)
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     autoRefreshInterval = setInterval(() => {
@@ -119,7 +186,11 @@ function updateSigninStatus(signedIn) {
     if (serviceForm) serviceForm.style.display = 'none';
     if (actionsDiv) actionsDiv.style.display = 'none';
     if (summaryCards) summaryCards.style.display = 'none';
-    
+
+    // Remove view-only message if present
+    const msg = document.getElementById('viewOnlyMsg');
+    if (msg) msg.remove();
+
     // Stop auto-refresh if running
     if (autoRefreshInterval) {
       clearInterval(autoRefreshInterval);
@@ -345,6 +416,37 @@ document.addEventListener('DOMContentLoaded', function() {
   if (filterBtn) filterBtn.addEventListener('click', applyFilters);
   const clearFilterBtn = document.getElementById('clearFilterBtn');
   if (clearFilterBtn) clearFilterBtn.addEventListener('click', clearFilters);
+
+  // CSV Export/Import event listeners
+  const exportBtn = document.getElementById('exportCsvBtn');
+  if (exportBtn) exportBtn.addEventListener('click', function() {
+    if (!isAuthorizedUser) {
+      alert('Only authorized users can export data.');
+      return;
+    }
+    let csv = 'Row,Vehicle ID,Service Type,Date,Cost (USD),Cause,Notes\n';
+    data.forEach((r, i) => {
+      const rowData = [i+1, r.vehicleId, r.serviceType, r.serviceDate, r.serviceCost, r.serviceCause, r.serviceNotes];
+      csv += rowData.map(v => '"' + String(v || '').replace(/"/g,'""') + '"').join(',') + '\n';
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'fleet_service_log.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  });
+
+  const importBtn = document.getElementById('importCsvBtn');
+  if (importBtn) importBtn.addEventListener('click', function() {
+    if (!isAuthorizedUser) {
+      alert('Only authorized users can import data.');
+      return;
+    }
+    const input = document.getElementById('importCsvInput');
+    if (!input.files.length) { alert('Please select a CSV file to import.'); return; }
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(ev) { importFromCSV(ev.target.result); };
+    reader.readAsText(file);
+  });
 });
 
 // ========================================
@@ -355,6 +457,10 @@ document.addEventListener('submit', function(e) {
   const target = e.target;
   if (!target || target.id !== 'serviceForm') return;
   e.preventDefault();
+  if (!isAuthorizedUser) {
+    alert('Only authorized users can add new records.');
+    return;
+  }
   // Get vehicle ID (handle "Other" case)
   const vehicleSelect = document.getElementById('vehicleIdSelect');
   let vehicleId = vehicleSelect.value;
@@ -413,6 +519,10 @@ document.addEventListener('submit', function(e) {
 // SECTION 5: EDIT/SAVE with Event Delegation
 // ========================================
 function editRow(row) {
+  if (!isAuthorizedUser) {
+    alert('Only authorized users can edit data.');
+    return;
+  }
   for (let i = 1; i <= 6; i++) {
     const cell = row.cells[i];
     const value = cell.innerText;
@@ -429,6 +539,10 @@ function editRow(row) {
 }
 
 function saveRow(row) {
+  if (!isAuthorizedUser) {
+    alert('Only authorized users can save data.');
+    return;
+  }
   for (let i = 1; i <= 6; i++) {
     const cell = row.cells[i];
     const input = cell.querySelector('input');
@@ -445,6 +559,10 @@ function saveRow(row) {
 }
 
 function deleteRow(row) {
+  if (!isAuthorizedUser) {
+    alert('Only authorized users can delete data.');
+    return;
+  }
   if (confirm('Are you sure you want to delete this service record?')) {
     row.remove();
     // Renumber rows
@@ -464,383 +582,4 @@ function deleteRow(row) {
 document.getElementById('serviceTable').addEventListener('click', function(e) {
   if (e.target.classList.contains('edit-btn')) {
     const row = e.target.closest('tr');
-    if (row && row.parentElement.id !== 'serviceTable') editRow(row);
-  } else if (e.target.classList.contains('save-btn')) {
-    const row = e.target.closest('tr');
-    if (row && row.parentElement.id !== 'serviceTable') saveRow(row);
-  } else if (e.target.classList.contains('delete-btn')) {
-    const row = e.target.closest('tr');
-    if (row && row.parentElement.id !== 'serviceTable') deleteRow(row);
-  }
-});
-
-// ========================================
-// SECTION 6: TOTALS
-// ========================================
-function updateTotals() {
-  const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
-  const totals = {};
-  for (let i = 0; i < table.rows.length; i++) {
-    const row = table.rows[i];
-    if (row.classList.contains('grand-total-row') || row.classList.contains('total-row')) continue;
-    const vehicleId = row.cells[1].innerText;
-    let cost = parseCost(row.cells[4].innerText);
-    if (!totals[vehicleId]) totals[vehicleId] = 0;
-    totals[vehicleId] += cost;
-  }
-  const existingGrandTotal = table.querySelector('.grand-total-row');
-  if (existingGrandTotal) existingGrandTotal.remove();
-  const totalsTable = document.getElementById('totalsTable').getElementsByTagName('tbody')[0];
-  totalsTable.innerHTML = '';
-  Object.keys(totals).forEach(vehicle => {
-    const tr = document.createElement('tr');
-    const tdVehicle = document.createElement('td'); tdVehicle.innerText = vehicle;
-    const tdTotal = document.createElement('td'); tdTotal.innerText = formatCost(totals[vehicle]);
-    tr.appendChild(tdVehicle); tr.appendChild(tdTotal); totalsTable.appendChild(tr);
-  });
-}
-
-function updateSummaryCards() {
-  const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
-  
-  // Count unique vehicles and total records
-  const vehicles = new Set();
-  let totalCost = 0;
-  let monthlyCount = 0;
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  
-  for (let i = 0; i < table.rows.length; i++) {
-    const row = table.rows[i];
-    if (row.classList.contains('grand-total-row') || row.classList.contains('total-row')) continue;
-    
-    const vehicleId = row.cells[1].innerText;
-    const cost = parseCost(row.cells[4].innerText);
-    const dateStr = row.cells[3].innerText;
-    
-    vehicles.add(vehicleId);
-    totalCost += cost;
-    
-    // Check if record is from current month
-    if (dateStr) {
-      const recordDate = new Date(dateStr);
-      if (recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear) {
-        monthlyCount += cost;
-      }
-    }
-  }
-  
-  // Update card values
-  document.getElementById('totalVehicles').textContent = vehicles.size || 8;
-  document.getElementById('totalRecords').textContent = table.rows.length - document.querySelectorAll('.grand-total-row, .total-row').length;
-  document.getElementById('monthlyCost').textContent = formatCost(monthlyCount);
-  
-  // Fetch readiness data
-  fetchVehicleReadiness();
-}
-
-// Fetch vehicle readiness data from the Form Responses sheet
-async function fetchVehicleReadiness() {
-  try {
-    const READINESS_SPREADSHEET_ID = '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk';
-    const response = await gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId: READINESS_SPREADSHEET_ID,
-      range: 'Form Responses!A:M',
-    });
-
-    const rows = response.result.values;
-    if (!rows || rows.length <= 1) {
-      document.getElementById('vehiclesReady').textContent = '0';
-      return;
-    }
-
-    // Process issues by vehicle (same logic as vehicle-readiness.js)
-    const issuesByVehicle = {};
-    rows.slice(1).forEach((row) => {
-      const vehicleMake = (row[1] || '').trim();
-      const vehicleModel = (row[2] || '').trim();
-      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' ');
-      
-      if (!vehicleName) return;
-      
-      const issue = {
-        priority: (row[7] || '').toLowerCase(),
-        dateReviewed: row[11] || '',
-        manualStatus: row[10] || ''
-      };
-      
-      if (!issuesByVehicle[vehicleName]) {
-        issuesByVehicle[vehicleName] = [];
-      }
-      issuesByVehicle[vehicleName].push(issue);
-    });
-
-    // Count ready vehicles
-    let readyCount = 0;
-    Object.keys(issuesByVehicle).forEach(vehicleName => {
-      const issues = issuesByVehicle[vehicleName];
-      const unreviewedIssues = issues.filter(issue => !issue.dateReviewed);
-      const highPriorityIssues = unreviewedIssues.filter(issue => issue.priority.includes('high'));
-      const mediumHighPriorityIssues = unreviewedIssues.filter(issue => !issue.priority.includes('low'));
-      
-      const latestStatusOverride = issues
-        .filter(issue => issue.manualStatus)
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
-      
-      // Same logic as vehicle-readiness.js
-      if (highPriorityIssues.length === 0 && mediumHighPriorityIssues.length === 0) {
-        if (!latestStatusOverride || !latestStatusOverride.manualStatus.toLowerCase().includes('not ready')) {
-          readyCount++;
-        }
-      }
-    });
-
-    document.getElementById('vehiclesReady').textContent = readyCount;
-  } catch (error) {
-    console.error('Error fetching readiness data:', error);
-    document.getElementById('vehiclesReady').textContent = '—';
-  }
-}
-
-// ========================================
-// SECTION 7: GOOGLE SHEETS STORAGE
-// ========================================
-async function saveTableToGoogleSheets() {
-  try {
-    await initGoogleAPI();
-    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
-    const values = [];
-    
-    for (let i = 0; i < table.rows.length; i++) {
-      const row = table.rows[i];
-      if (row.classList.contains('total-row') || row.classList.contains('grand-total-row')) continue;
-      values.push([
-        row.cells[1].innerText, // Vehicle ID → Sheet column A
-        row.cells[2].innerText, // Service Type → Sheet column B
-        row.cells[3].innerText, // Date → Sheet column C
-        row.cells[4].innerText, // Cost → Sheet column D
-        row.cells[5].innerText, // Cause → Sheet column E
-        row.cells[6].innerText  // Notes → Sheet column F
-      ]);
-    }
-    
-    
-    // Write new data
-    if (values.length > 0) {
-      await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
-        range: 'Sheet1!A2',
-        valueInputOption: 'USER_ENTERED',
-        resource: { values: values }
-      });
-    }
-    
-    console.log('Data saved to Google Sheets successfully');
-  } catch (error) {
-    console.error('Error saving to Google Sheets:', error);
-    alert('Failed to save to Google Sheets. Check console for details.');
-  }
-}
-
-async function loadTableFromGoogleSheets() {
-  try {
-    await initGoogleAPI();
-    const response = await gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
-      range: GOOGLE_SHEETS_CONFIG.range
-    });
-    
-    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
-    table.innerHTML = '';
-    
-    const rows = response.result.values || [];
-    // Skip header row (index 0)
-    // Collect unique vehicle IDs and service types
-    const vehicleIds = new Set();
-    const serviceTypes = new Set();
-    // Sort by date descending (newest first)
-    const dataRows = rows.slice(1).filter(rowData => rowData[0] && rowData[0] !== '' && !rowData[0]?.includes('TOTAL'));
-    dataRows.sort((a, b) => {
-      // Date is column C (index 2)
-      const dateA = new Date(a[2] || '1900-01-01');
-      const dateB = new Date(b[2] || '1900-01-01');
-      return dateB - dateA;
-    });
-    dataRows.forEach((rowData, idx) => {
-      vehicleIds.add(rowData[0]);
-      if (rowData[1] && rowData[1] !== '') serviceTypes.add(rowData[1]);
-      const newRow = table.insertRow();
-      newRow.insertCell(0).innerText = idx + 1; // Row number
-      newRow.insertCell(1).innerText = rowData[0] || ''; // Vehicle ID from Sheet column A
-      newRow.insertCell(2).innerText = rowData[1] || ''; // Service Type from Sheet column B
-      newRow.insertCell(3).innerText = rowData[2] || ''; // Date from Sheet column C
-      newRow.insertCell(4).innerText = rowData[3] || '$0.00'; // Cost from Sheet column D
-      newRow.insertCell(5).innerText = rowData[4] || ''; // Cause from Sheet column E
-      newRow.insertCell(6).innerText = rowData[5] || ''; // Notes from Sheet column F
-      const editCell = newRow.insertCell(7);
-      editCell.appendChild(createEditButton());
-      editCell.appendChild(createDeleteButton());
-    });
-
-    // Populate Vehicle ID dropdown
-    const vehicleIdSelect = document.getElementById('vehicleIdSelect');
-    if (vehicleIdSelect) {
-      // Remove all options except the first ("Select Vehicle") and "other"
-      for (let i = vehicleIdSelect.options.length - 1; i >= 1; i--) {
-        if (vehicleIdSelect.options[i].value !== 'other') vehicleIdSelect.remove(i);
-      }
-      // Add sorted vehicle IDs
-      Array.from(vehicleIds).sort().forEach(id => {
-        if (![...vehicleIdSelect.options].some(opt => opt.value === id)) {
-          const opt = document.createElement('option');
-          opt.value = id;
-          opt.textContent = id;
-          vehicleIdSelect.insertBefore(opt, vehicleIdSelect.options[vehicleIdSelect.options.length - 1]);
-        }
-      });
-    }
-
-    // Populate Service Type dropdown
-    const serviceTypeSelect = document.getElementById('serviceTypeSelect');
-    if (serviceTypeSelect) {
-      // Remove all options except the first ("Select Service Type") and "other"
-      for (let i = serviceTypeSelect.options.length - 1; i >= 1; i--) {
-        if (serviceTypeSelect.options[i].value !== 'other') serviceTypeSelect.remove(i);
-      }
-      // Add sorted service types
-      Array.from(serviceTypes).sort().forEach(type => {
-        if (![...serviceTypeSelect.options].some(opt => opt.value === type)) {
-          const opt = document.createElement('option');
-          opt.value = type;
-          opt.textContent = type;
-          serviceTypeSelect.insertBefore(opt, serviceTypeSelect.options[serviceTypeSelect.options.length - 1]);
-        }
-      });
-    }
-    
-    // Show/hide buttons based on sign-in status
-    if (isSignedIn) {
-      const allButtons = table.querySelectorAll('.edit-btn, .delete-btn');
-      allButtons.forEach(btn => btn.style.display = 'inline-block');
-    } else {
-      const allButtons = table.querySelectorAll('.edit-btn, .delete-btn');
-      allButtons.forEach(btn => btn.style.display = 'none');
-    }
-    
-    updateTotals();
-    updateSummaryCards();
-    populateFilterVehicles();
-    console.log('Data loaded from Google Sheets successfully');
-  } catch (error) {
-    console.error('Error loading from Google Sheets:', error);
-    console.error('Error details:', error.result ? error.result.error : error.message);
-    
-    // Only show alert if signed in (otherwise it's expected to fail)
-    if (isSignedIn) {
-      alert('Failed to load from Google Sheets: ' + (error.result?.error?.message || error.message || 'Unknown error'));
-    }
-  }
-}
-
-// [LEGACY: The following functions are disabled.]
-// function saveTableToStorage() {
-//   const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
-//   const data = [];
-//   for (let i = 0; i < table.rows.length; i++) {
-//     const row = table.rows[i];
-//     if (row.classList.contains('total-row') || row.classList.contains('grand-total-row')) continue;
-//     data.push({
-//       number: row.cells[0].innerText,
-//       vehicleId: row.cells[1].innerText,
-//       serviceType: row.cells[2].innerText,
-//       serviceDate: row.cells[3].innerText,
-//       serviceCost: row.cells[4].innerText,
-//       serviceCause: row.cells[5].innerText,
-//       serviceNotes: row.cells[6].innerText
-//     });
-//   }
-//   localStorage.setItem('fleetServiceLog', JSON.stringify(data));
-//   // Also save to Google Sheets
-//   saveTableToGoogleSheets();
-// }
-
-// function loadTableFromStorage() {
-//   // Load from Google Sheets instead
-//   loadTableFromGoogleSheets();
-// }
-
-// ========================================
-// SECTION 8: EXPORT/IMPORT CSV
-// ========================================
-document.addEventListener('click', function(e) {
-  if (!e.target) return;
-  if (e.target.id === 'exportCsvBtn') {
-    // const data = JSON.parse(localStorage.getItem('fleetServiceLog') || '[]'); // [LEGACY: Commented out]
-    let csv = 'Row,Vehicle ID,Service Type,Date,Cost (USD),Cause,Notes\n';
-    data.forEach((r, i) => {
-      const rowData = [i+1, r.vehicleId, r.serviceType, r.serviceDate, r.serviceCost, r.serviceCause, r.serviceNotes];
-      csv += rowData.map(v => '"' + String(v || '').replace(/"/g,'""') + '"').join(',') + '\n';
-    });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'fleet_service_log.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-  }
-  else if (e.target.id === 'importCsvBtn') {
-    const input = document.getElementById('importCsvInput');
-    if (!input.files.length) { alert('Please select a CSV file to import.'); return; }
-    const file = input.files[0];
-    const reader = new FileReader();
-    reader.onload = function(ev) { importFromCSV(ev.target.result); };
-    reader.readAsText(file);
-  }
-});
-
-function importFromCSV(csvText) {
-  const lines = csvText.trim().split(/\r?\n/);
-  if (lines.length < 2) return;
-  const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
-  table.innerHTML = '';
-  for (let i = 1; i < lines.length; i++) {
-    const row = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-    if (row.length < 7) continue;
-    const firstCell = row[0].replace(/(^"|"$)/g, '').replace(/""/g, '"');
-    if (firstCell === '' || firstCell.includes('TOTAL')) continue;
-    const newRow = table.insertRow();
-    for (let j = 0; j < 7; j++) {
-      let cellText = row[j].replace(/(^"|"$)/g, '').replace(/""/g, '"');
-      newRow.insertCell(j).innerText = cellText;
-    }
-    const editCell = newRow.insertCell(7);
-    editCell.appendChild(createEditButton());
-  }
-  updateTotals();
-  saveTableToStorage();
-}
-
-// ========================================
-// SECTION 9: PAGE INITIALIZATION
-// ========================================
-window.onload = function() {
-  // Initialize Google API and then load data
-  initGoogleAPI().then(() => {
-    // Fetch vehicle readiness after API is initialized
-    fetchVehicleReadiness();
-  }).catch(error => {
-    console.error('Failed to initialize Google API:', error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
-    if (error.details) console.error('Error details object:', error.details);
-    // Fallback: show sign-in button anyway
-    const signInBtn = document.getElementById('signInBtn');
-    if (signInBtn) signInBtn.style.display = 'inline-block';
-  });
-  
-  populateFilterVehicles();
-  toggleOtherVehicle();
-  toggleOtherServiceType();
-  const defaultFrom = document.getElementById('filterDateFrom');
-  if (defaultFrom) defaultFrom.value = '2025-01-01';
-  const today = new Date();
-  const todayFormatted = today.toISOString().split('T')[0];
-  const toEl = document.getElementById('filterDateTo');
-  if (toEl) toEl.value = todayFormatted;
-};
+    if
