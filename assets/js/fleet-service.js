@@ -632,3 +632,43 @@ document.getElementById('serviceTable').addEventListener('click', function(e) {
     deleteRow(row);
   }
 });
+
+// ========================================
+// SECTION: UPDATE TOTALS AND SUMMARY CARDS
+// ========================================
+function updateTotals() {
+  // Update summary cards
+  const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+  let totalVehicles = new Set();
+  let totalRecords = 0;
+  let monthlyCost = 0;
+  for (let i = 0; i < table.rows.length; i++) {
+    const row = table.rows[i];
+    const vehicleId = row.cells[1]?.innerText || '';
+    const cost = parseFloat((row.cells[4]?.innerText || '').replace(/[^0-9.]/g, '')) || 0;
+    if (vehicleId) totalVehicles.add(vehicleId);
+    monthlyCost += cost;
+    totalRecords++;
+  }
+  document.getElementById('totalVehicles').innerText = totalVehicles.size;
+  document.getElementById('totalRecords').innerText = totalRecords;
+  document.getElementById('monthlyCost').innerText = '$' + monthlyCost.toFixed(2);
+  // Update totals by vehicle
+  const totalsTable = document.getElementById('totalsTable').getElementsByTagName('tbody')[0];
+  totalsTable.innerHTML = '';
+  const vehicleTotals = {};
+  for (let i = 0; i < table.rows.length; i++) {
+    const row = table.rows[i];
+    const vehicleId = row.cells[1]?.innerText || '';
+    const cost = parseFloat((row.cells[4]?.innerText || '').replace(/[^0-9.]/g, '')) || 0;
+    if (!vehicleId) continue;
+    if (!vehicleTotals[vehicleId]) vehicleTotals[vehicleId] = 0;
+    vehicleTotals[vehicleId] += cost;
+  }
+  Object.entries(vehicleTotals).forEach(([vehicle, cost]) => {
+    const tr = document.createElement('tr');
+    tr.insertCell(0).innerText = vehicle;
+    tr.insertCell(1).innerText = '$' + cost.toFixed(2);
+    totalsTable.appendChild(tr);
+  });
+}
