@@ -5,6 +5,8 @@ console.log('fleet-service.js script loaded and running');
 // ========================================
 // Fetches service log data from Google Sheets and populates the service table
 async function loadTableFromGoogleSheets() {
+    alert('loadTableFromGoogleSheets called');
+    console.log('loadTableFromGoogleSheets function called');
   try {
     await initGoogleAPI();
     const response = await gapi.client.sheets.spreadsheets.values.get({
