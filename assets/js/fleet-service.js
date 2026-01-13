@@ -582,4 +582,16 @@ function deleteRow(row) {
 document.getElementById('serviceTable').addEventListener('click', function(e) {
   if (e.target.classList.contains('edit-btn')) {
     const row = e.target.closest('tr');
-    if
+    if (!isAuthorizedUser) {
+      alert('Only authorized users can edit data.');
+      return;
+    }
+    editRow(row);
+  } else if (e.target.classList.contains('save-btn')) {
+    const row = e.target.closest('tr');
+    saveRow(row);
+  } else if (e.target.classList.contains('delete-btn')) {
+    const row = e.target.closest('tr');
+    deleteRow(row);
+  }
+});
