@@ -222,7 +222,7 @@
     </thead>
     <tbody></tbody>
   </table>
-  <script src="assets/js/fleet-service.js"></script>
+  <!-- Move script to end of body for proper DOM loading -->
     <script>
       // Paging logic for service table
       let currentPage = 1;
@@ -274,6 +274,7 @@
         controls.innerHTML = html;
       }
     </script>
+  <script src="assets/js/fleet-service.js"></script>
   <footer style="width:100%;text-align:center;padding:24px 0 18px 0;color:#34495e;font-size:1rem;background:transparent; font-weight:bold;">
     <hr style="margin-bottom:16px;">
     <div>
