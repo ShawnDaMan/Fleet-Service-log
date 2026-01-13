@@ -239,7 +239,13 @@ async function loadTableFromGoogleSheets() {
       tr.insertCell(1).innerText = row[0] || '';
       tr.insertCell(2).innerText = row[1] || '';
       tr.insertCell(3).innerText = row[2] || '';
-      tr.insertCell(4).innerText = formatCost(row[3] || 0);
+      // Fix: parse cost safely
+      let cost = 0;
+      if (row[3] !== undefined && row[3] !== null && row[3] !== '') {
+        const parsed = parseFloat(String(row[3]).replace(/[^0-9.\-]/g, ''));
+        cost = isNaN(parsed) ? 0 : parsed;
+      }
+      tr.insertCell(4).innerText = formatCost(cost);
       tr.insertCell(5).innerText = row[4] || '';
       tr.insertCell(6).innerText = row[5] || '';
       const editCell = tr.insertCell(7);
@@ -645,7 +651,11 @@ function updateTotals() {
   for (let i = 0; i < table.rows.length; i++) {
     const row = table.rows[i];
     const vehicleId = row.cells[1]?.innerText || '';
-    const cost = parseFloat((row.cells[4]?.innerText || '').replace(/[^0-9.]/g, '')) || 0;
+    let cost = 0;
+    if (row.cells[4]) {
+      const parsed = parseFloat(String(row.cells[4].innerText).replace(/[^0-9.\-]/g, ''));
+      cost = isNaN(parsed) ? 0 : parsed;
+    }
     if (vehicleId) totalVehicles.add(vehicleId);
     monthlyCost += cost;
     totalRecords++;
@@ -660,7 +670,11 @@ function updateTotals() {
   for (let i = 0; i < table.rows.length; i++) {
     const row = table.rows[i];
     const vehicleId = row.cells[1]?.innerText || '';
-    const cost = parseFloat((row.cells[4]?.innerText || '').replace(/[^0-9.]/g, '')) || 0;
+    let cost = 0;
+    if (row.cells[4]) {
+      const parsed = parseFloat(String(row.cells[4].innerText).replace(/[^0-9.\-]/g, ''));
+      cost = isNaN(parsed) ? 0 : parsed;
+    }
     if (!vehicleId) continue;
     if (!vehicleTotals[vehicleId]) vehicleTotals[vehicleId] = 0;
     vehicleTotals[vehicleId] += cost;
