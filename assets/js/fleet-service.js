@@ -566,6 +566,7 @@ function deleteRow(row) {
   if (confirm('Are you sure you want to delete this service record?')) {
     row.remove();
     // Renumber rows
+
     const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
     for (let i = 0; i < table.rows.length; i++) {
       if (!table.rows[i].classList.contains('total-row') && !table.rows[i].classList.contains('grand-total-row')) {
