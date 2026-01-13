@@ -1,50 +1,3 @@
-alert('fleet-service.js loaded');
-console.log('fleet-service.js script loaded and running');
-// ========================================
-// SECTION 6: LOAD DATA FROM GOOGLE SHEETS
-// ========================================
-// Fetches service log data from Google Sheets and populates the service table
-async function loadTableFromGoogleSheets() {
-    alert('loadTableFromGoogleSheets called');
-    console.log('loadTableFromGoogleSheets function called');
-  try {
-    await initGoogleAPI();
-    const response = await gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
-      range: GOOGLE_SHEETS_CONFIG.range
-    });
-    console.log('Google Sheets API raw response:', response);
-    const rows = response.result.values || [];
-    console.log('Rows returned from Google Sheets:', rows);
-    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
-    table.innerHTML = '';
-    if (rows.length <= 1) {
-      // No data or only header
-      return;
-    }
-    // Skip header row (assume first row is header)
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      const tr = document.createElement('tr');
-      tr.insertCell(0).innerText = i; // Row number
-      tr.insertCell(1).innerText = row[0] || '';
-      tr.insertCell(2).innerText = row[1] || '';
-      tr.insertCell(3).innerText = row[2] || '';
-      tr.insertCell(4).innerText = formatCost(row[3] || 0);
-      tr.insertCell(5).innerText = row[4] || '';
-      tr.insertCell(6).innerText = row[5] || '';
-      const editCell = tr.insertCell(7);
-      editCell.appendChild(createEditButton());
-      editCell.appendChild(createDeleteButton());
-      table.appendChild(tr);
-    }
-    updateTotals();
-  } catch (error) {
-    console.error('Failed to load data from Google Sheets:', error);
-    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
-    table.innerHTML = '<tr><td colspan="8" style="color:red;">Failed to load data from Google Sheets.</td></tr>';
-  }
-}
 // Fleet Service Log - Main Frontend Script
 // Purpose: Handles all frontend logic for the Fleet Service Log web app.
 // Sections: Google Sheets integration, UI logic, filters, events, add/edit, totals, storage, CSV import/export, and initialization.
@@ -76,8 +29,6 @@ let authorizedEmails = [];   // List of authorized emails from sheet
 // --- Google API Initialization ---
 // Loads Google API and sets up OAuth token client. (Legacy: used to restore session from localStorage)
 function initGoogleAPI() {
-    alert('initGoogleAPI called');
-    console.log('initGoogleAPI function called');
   return new Promise((resolve, reject) => {
     if (gapiInitialized) { // Already initialized
       resolve();
@@ -105,29 +56,12 @@ function initGoogleAPI() {
                 return;
               }
               accessToken = response.access_token;
-              // Store token and expiry in localStorage (8 hours) [LEGACY: Commented out]
-              // const expiryTime = Date.now() + (8 * 3600 * 1000);
-              // localStorage.setItem('google_access_token', accessToken);
-              // localStorage.setItem('google_token_expiry', expiryTime.toString());
               gapi.client.setToken({access_token: accessToken});
               updateSigninStatus(true); // Update UI for signed-in state
             }
           });
         }
         gapiInitialized = true;
-        // Restore session if token is still valid
-        // const storedToken = localStorage.getItem('google_access_token');
-        // const tokenExpiry = localStorage.getItem('google_token_expiry');
-        // if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-        //   accessToken = storedToken;
-        //   gapi.client.setToken({access_token: accessToken});
-        //   updateSigninStatus(true);
-        // } else {
-        //   // Clear expired token
-        //   localStorage.removeItem('google_access_token');
-        //   localStorage.removeItem('google_token_expiry');
-        //   updateSigninStatus(false);
-        // }
         resolve();
       } catch (error) {
         reject(error);
@@ -155,8 +89,6 @@ async function fetchGoogleUserEmail(token) {
 // Controls visibility of UI elements and triggers data loading based on sign-in status.
 // Also manages auto-refresh interval for live data.
 async function updateSigninStatus(signedIn) {
-    alert('updateSigninStatus called');
-    console.log('updateSigninStatus function called with signedIn:', signedIn);
   isSignedIn = signedIn;
   userEmail = null;
   isAuthorizedUser = false;
@@ -280,6 +212,47 @@ function handleSignOut() {
   // localStorage.removeItem('google_access_token');
   // localStorage.removeItem('google_token_expiry');
   updateSigninStatus(false);
+}
+
+// --- SECTION 6: LOAD DATA FROM GOOGLE SHEETS
+// ========================================
+// Fetches service log data from Google Sheets and populates the service table
+async function loadTableFromGoogleSheets() {
+  try {
+    await initGoogleAPI();
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
+      range: GOOGLE_SHEETS_CONFIG.range
+    });
+    const rows = response.result.values || [];
+    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+    table.innerHTML = '';
+    if (rows.length <= 1) {
+      // No data or only header
+      return;
+    }
+    // Skip header row (assume first row is header)
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const tr = document.createElement('tr');
+      tr.insertCell(0).innerText = i; // Row number
+      tr.insertCell(1).innerText = row[0] || '';
+      tr.insertCell(2).innerText = row[1] || '';
+      tr.insertCell(3).innerText = row[2] || '';
+      tr.insertCell(4).innerText = formatCost(row[3] || 0);
+      tr.insertCell(5).innerText = row[4] || '';
+      tr.insertCell(6).innerText = row[5] || '';
+      const editCell = tr.insertCell(7);
+      editCell.appendChild(createEditButton());
+      editCell.appendChild(createDeleteButton());
+      table.appendChild(tr);
+    }
+    updateTotals();
+  } catch (error) {
+    console.error('Failed to load data from Google Sheets:', error);
+    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+    table.innerHTML = '<tr><td colspan="8" style="color:red;">Failed to load data from Google Sheets.</td></tr>';
+  }
 }
 
 // --- Helper Functions ---
@@ -498,6 +471,18 @@ document.addEventListener('DOMContentLoaded', function() {
     reader.onload = function(ev) { importFromCSV(ev.target.result); };
     reader.readAsText(file);
   });
+});
+
+// --- Ensure Google API and data loading on page load ---
+document.addEventListener('DOMContentLoaded', function() {
+  // Try to initialize Google API and load data regardless of sign-in state
+  initGoogleAPI()
+    .then(() => {
+      updateSigninStatus(false); // Try to load in read-only mode
+    })
+    .catch((err) => {
+      console.error('Google API initialization failed:', err);
+    });
 });
 
 // ========================================
