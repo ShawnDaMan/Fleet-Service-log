@@ -153,6 +153,8 @@ async function fetchGoogleUserEmail(token) {
 // Controls visibility of UI elements and triggers data loading based on sign-in status.
 // Also manages auto-refresh interval for live data.
 async function updateSigninStatus(signedIn) {
+    alert('updateSigninStatus called');
+    console.log('updateSigninStatus function called with signedIn:', signedIn);
   isSignedIn = signedIn;
   userEmail = null;
   isAuthorizedUser = false;
