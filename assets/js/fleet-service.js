@@ -76,6 +76,8 @@ let authorizedEmails = [];   // List of authorized emails from sheet
 // --- Google API Initialization ---
 // Loads Google API and sets up OAuth token client. (Legacy: used to restore session from localStorage)
 function initGoogleAPI() {
+    alert('initGoogleAPI called');
+    console.log('initGoogleAPI function called');
   return new Promise((resolve, reject) => {
     if (gapiInitialized) { // Already initialized
       resolve();
