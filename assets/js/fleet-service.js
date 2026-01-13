@@ -1,3 +1,44 @@
+// ========================================
+// SECTION 6: LOAD DATA FROM GOOGLE SHEETS
+// ========================================
+// Fetches service log data from Google Sheets and populates the service table
+async function loadTableFromGoogleSheets() {
+  try {
+    await initGoogleAPI();
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
+      range: GOOGLE_SHEETS_CONFIG.range
+    });
+    const rows = response.result.values || [];
+    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+    table.innerHTML = '';
+    if (rows.length <= 1) {
+      // No data or only header
+      return;
+    }
+    // Skip header row (assume first row is header)
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const tr = document.createElement('tr');
+      tr.insertCell(0).innerText = i; // Row number
+      tr.insertCell(1).innerText = row[0] || '';
+      tr.insertCell(2).innerText = row[1] || '';
+      tr.insertCell(3).innerText = row[2] || '';
+      tr.insertCell(4).innerText = formatCost(row[3] || 0);
+      tr.insertCell(5).innerText = row[4] || '';
+      tr.insertCell(6).innerText = row[5] || '';
+      const editCell = tr.insertCell(7);
+      editCell.appendChild(createEditButton());
+      editCell.appendChild(createDeleteButton());
+      table.appendChild(tr);
+    }
+    updateTotals();
+  } catch (error) {
+    console.error('Failed to load data from Google Sheets:', error);
+    const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+    table.innerHTML = '<tr><td colspan="8" style="color:red;">Failed to load data from Google Sheets.</td></tr>';
+  }
+}
 // Fleet Service Log - Main Frontend Script
 // Purpose: Handles all frontend logic for the Fleet Service Log web app.
 // Sections: Google Sheets integration, UI logic, filters, events, add/edit, totals, storage, CSV import/export, and initialization.
