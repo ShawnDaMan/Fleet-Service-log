@@ -1,3 +1,5 @@
+alert('fleet-service.js loaded');
+console.log('fleet-service.js script loaded and running');
 // ========================================
 // SECTION 6: LOAD DATA FROM GOOGLE SHEETS
 // ========================================
@@ -9,7 +11,9 @@ async function loadTableFromGoogleSheets() {
       spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
       range: GOOGLE_SHEETS_CONFIG.range
     });
+    console.log('Google Sheets API raw response:', response);
     const rows = response.result.values || [];
+    console.log('Rows returned from Google Sheets:', rows);
     const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
     table.innerHTML = '';
     if (rows.length <= 1) {
