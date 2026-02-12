@@ -39,4 +39,15 @@ This website is designed to help Brays Motor Museum Shop services track, manage,
 - If Google API credentials change, update them in the config section of `fleet-service.js`.
 
 ## Contact
-For questions or issues, see Shawn Nicholson or the Brays Motor Museum Shop services team.
+For questions or issues, see Shawn Nicholson or the Brays Motor Museum Shop services team. 832-646-0817
+
+## License
+This project is released under the [MIT License](https://opensource.org/licenses/MIT).
+
+## Acknowledgments
+- Google Sheets API: https://developers.google.com/sheets/api
+- Google Identity Services: https://developers.google.com/identity/sign-in/web
+- Bootstrap: https://getbootstrap.com
+- Google Fonts: https://fonts.google.com        
+
+    
