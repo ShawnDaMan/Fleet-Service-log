@@ -11,7 +11,7 @@ const GOOGLE_SHEETS_CONFIG = {
   spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q', // Main Fleet Service Log sheet
   range: 'Sheet1!A:F', // Data range for service log
   discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'], // API discovery
-  scope: 'https://www.googleapis.com/auth/spreadsheets' // Full Sheets access
+  scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email' // Sheets + email for authorized-user checks
 };
 
 // --- Global State Variables ---
@@ -56,6 +56,9 @@ function initGoogleAPI() {
                 return;
               }
               accessToken = response.access_token;
+              const expiryTime = Date.now() + (8 * 3600 * 1000);
+              localStorage.setItem('google_access_token', accessToken);
+              localStorage.setItem('google_token_expiry', String(expiryTime));
               gapi.client.setToken({access_token: accessToken});
               updateSigninStatus(true); // Update UI for signed-in state
             }
@@ -77,7 +80,10 @@ async function fetchGoogleUserEmail(token) {
     const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      // User info can fail if the token was issued without email scope.
+      return null;
+    }
     const data = await response.json();
     return data.email || null;
   } catch (e) {
@@ -127,6 +133,15 @@ async function updateSigninStatus(signedIn) {
   if (signedIn) {
     // Fetch user email using Google OAuth2 userinfo endpoint
     userEmail = await fetchGoogleUserEmail(accessToken);
+    if (!userEmail) {
+      // Force a fresh consent prompt so Google can issue a token with required scopes.
+      if (tokenClient) tokenClient.requestAccessToken({ prompt: 'consent' });
+      const table = document.getElementById('serviceTable')?.getElementsByTagName('tbody')[0];
+      if (table) {
+        table.innerHTML = '<tr><td colspan="8" style="padding:16px;color:#7f8c8d;text-align:center;">Session needs re-authorization. Click Sign In again.</td></tr>';
+      }
+      return;
+    }
     // Fetch authorized emails from sheet
     authorizedEmails = await fetchAuthorizedEmails();
     isAuthorizedUser = userEmail && authorizedEmails.includes(userEmail.toLowerCase());
@@ -179,14 +194,10 @@ async function updateSigninStatus(signedIn) {
       clearInterval(autoRefreshInterval);
       autoRefreshInterval = null;
     }
-    // Try to load data in read-only mode (no sign-in required)
-    loadTableFromGoogleSheets()
-      .then(() => {
-        populateFilterVehicles();
-      })
-      .catch(() => {
-        console.log('Not signed in - viewing in read-only mode');
-      });
+    const table = document.getElementById('serviceTable')?.getElementsByTagName('tbody')[0];
+    if (table) {
+      table.innerHTML = '<tr><td colspan="8" style="padding:16px;color:#7f8c8d;text-align:center;">Sign in to load service records.</td></tr>';
+    }
   }
 }
 
@@ -208,9 +219,8 @@ function handleSignOut() {
     accessToken = null;
     gapi.client.setToken(null);
   }
-  // Remove token from localStorage [LEGACY: Commented out]
-  // localStorage.removeItem('google_access_token');
-  // localStorage.removeItem('google_token_expiry');
+  localStorage.removeItem('google_access_token');
+  localStorage.removeItem('google_token_expiry');
   updateSigninStatus(false);
 }
 
@@ -219,6 +229,11 @@ function handleSignOut() {
 // Fetches service log data from Google Sheets and populates the service table
 async function loadTableFromGoogleSheets() {
   try {
+    if (!accessToken) {
+      const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
+      table.innerHTML = '<tr><td colspan="8" style="padding:16px;color:#7f8c8d;text-align:center;">Sign in to load service records.</td></tr>';
+      return;
+    }
     await initGoogleAPI();
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: GOOGLE_SHEETS_CONFIG.spreadsheetId,
@@ -256,6 +271,15 @@ async function loadTableFromGoogleSheets() {
     updateTotals();
   } catch (error) {
     console.error('Failed to load data from Google Sheets:', error);
+    const unauthorized = error?.status === 401 || error?.result?.error?.status === 'UNAUTHENTICATED' || /invalid authentication credentials/i.test(error?.result?.error?.message || error?.body || '');
+    if (unauthorized) {
+      accessToken = null;
+      localStorage.removeItem('google_access_token');
+      localStorage.removeItem('google_token_expiry');
+      if (gapi?.client?.setToken) gapi.client.setToken(null);
+      updateSigninStatus(false);
+      return;
+    }
     const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
     table.innerHTML = '<tr><td colspan="8" style="color:red;">Failed to load data from Google Sheets.</td></tr>';
   }
@@ -484,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Try to initialize Google API and load data regardless of sign-in state
   initGoogleAPI()
     .then(() => {
-      updateSigninStatus(false); // Try to load in read-only mode
+      updateSigninStatus(Boolean(accessToken)); // Restore signed-in state when a token exists
     })
     .catch((err) => {
       console.error('Google API initialization failed:', err);

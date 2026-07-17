@@ -32,23 +32,16 @@ async function initializeGapiClient() {
   });
   gapiInited = true;
   
-  // Check for stored token
-  const storedToken = localStorage.getItem('google_access_token');
-  const tokenExpiry = localStorage.getItem('google_token_expiry');
-  
-  if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-    accessToken = storedToken;
-    gapi.client.setToken({access_token: accessToken});
-  }
-  
   // Check if elements exist, if not wait
   const checkAndLoad = () => {
     const grid = document.getElementById('readinessGrid');
     const tbody = document.getElementById('issuesTableBody');
     
     if (grid && tbody) {
-      updateSigninStatus(true);
-      loadReadinessData();
+      updateSigninStatus(Boolean(accessToken));
+      if (accessToken) {
+        loadReadinessData();
+      }
     } else {
       setTimeout(checkAndLoad, 100);
     }
@@ -67,6 +60,7 @@ function gisLoaded() {
       localStorage.setItem('google_access_token', accessToken);
       localStorage.setItem('google_token_expiry', expiryTime);
       gapi.client.setToken({access_token: accessToken});
+      updateSigninStatus(true);
       loadReadinessData();
     },
   });
@@ -93,15 +87,24 @@ function handleSignIn() {
 }
 
 function updateSigninStatus(ready) {
-  // Always show content for public access
-  document.getElementById('summaryStats').style.display = 'flex';
-  document.getElementById('readinessGrid').style.display = 'grid';
-  
-  // Start auto-refresh every 60 seconds
+  const summaryStats = document.getElementById('summaryStats');
+  const readinessGrid = document.getElementById('readinessGrid');
+  const signInBtn = document.getElementById('readinessSignInBtn');
+  const signOutBtn = document.getElementById('readinessSignOutBtn');
+
+  if (summaryStats) summaryStats.style.display = accessToken ? 'flex' : 'none';
+  if (readinessGrid) readinessGrid.style.display = 'grid';
+  if (signInBtn) signInBtn.style.display = accessToken ? 'none' : 'inline-block';
+  if (signOutBtn) signOutBtn.style.display = accessToken ? 'inline-block' : 'none';
+
   if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-  autoRefreshInterval = setInterval(() => {
-    loadReadinessData();
-  }, 60000);
+  if (accessToken) {
+    autoRefreshInterval = setInterval(() => {
+      loadReadinessData();
+    }, 60000);
+  } else if (readinessGrid) {
+    readinessGrid.innerHTML = '<p style="text-align: center; color: #7f8c8d;">Sign in with Google to load vehicle readiness data.</p>';
+  }
 }
 
 function handleSignOut() {
@@ -109,7 +112,7 @@ function handleSignOut() {
   localStorage.removeItem('google_access_token');
   localStorage.removeItem('google_token_expiry');
   gapi.client.setToken(null);
-  loadReadinessData();
+  updateSigninStatus(false);
   alert('You have been signed out.');
 }
 
@@ -117,6 +120,13 @@ function handleSignOut() {
 let isLoading = false;
 async function loadReadinessData() {
   if (isLoading) return;
+  if (!accessToken) {
+    const grid = document.getElementById('readinessGrid');
+    if (grid) {
+      grid.innerHTML = '<p style="text-align: center; color: #7f8c8d;">Sign in with Google to load vehicle readiness data.</p>';
+    }
+    return;
+  }
   
   isLoading = true;
   try {
@@ -173,6 +183,15 @@ async function loadReadinessData() {
     displayIssuesTable(rows);
   } catch (error) {
     console.error('Error loading readiness data:', error);
+    const unauthorized = error?.status === 401 || error?.result?.error?.status === 'UNAUTHENTICATED' || /invalid authentication credentials/i.test(error?.result?.error?.message || error?.body || '');
+    if (unauthorized) {
+      accessToken = null;
+      localStorage.removeItem('google_access_token');
+      localStorage.removeItem('google_token_expiry');
+      if (gapi?.client?.setToken) gapi.client.setToken(null);
+      updateSigninStatus(false);
+      return;
+    }
     document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #e74c3c;">Error loading data. Please try again.</p>';
   } finally {
     isLoading = false;
