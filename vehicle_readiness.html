@@ -189,14 +189,14 @@
       <h3 style="margin-top: 0; color: #2c3e50;">Report Vehicle Issue</h3>
       
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Vehicle:</label>
+        <label for="issueVehicle" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Vehicle:</label>
         <select id="issueVehicle" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
           <option value="">Select Vehicle</option>
         </select>
       </div>
 
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Issue Type:</label>
+        <label for="issueType" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Issue Type:</label>
         <select id="issueType" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;" onchange="toggleOtherField()">
           <option value="">Select Issue Type</option>
           <option value="Tires">1. Tires</option>
@@ -208,12 +208,12 @@
       </div>
 
       <div id="otherIssueField" style="display: none; margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Describe Issue:</label>
+        <label for="otherIssueText" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Describe Issue:</label>
         <input type="text" id="otherIssueText" placeholder="Enter issue description" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
       </div>
 
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Priority:</label>
+        <label for="issuePriority" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Priority:</label>
         <select id="issuePriority" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
           <option value="Low">Low</option>
           <option value="Medium">Medium</option>
@@ -222,12 +222,12 @@
       </div>
 
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Your Name:</label>
+        <label for="reporterName" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Your Name:</label>
         <input type="text" id="reporterName" placeholder="Enter your name" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
       </div>
 
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Additional Notes (Optional):</label>
+        <label for="issueNotes" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Additional Notes (Optional):</label>
         <textarea id="issueNotes" rows="3" placeholder="Any additional details..." style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;"></textarea>
       </div>
 
@@ -246,29 +246,29 @@
       <input type="hidden" id="editRowIndex">
       
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Vehicle:</label>
+        <label for="editVehicle" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Vehicle:</label>
         <select id="editVehicle" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
           <option value="">Select Vehicle</option>
         </select>
       </div>
 
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Division:</label>
+        <label for="editDivision" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Division:</label>
         <input type="text" id="editDivision" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
       </div>
 
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Date:</label>
+        <label for="editDate" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Date:</label>
         <input type="date" id="editDate" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
       </div>
 
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Main Issue:</label>
+        <label for="editMainIssue" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Main Issue:</label>
         <input type="text" id="editMainIssue" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
       </div>
 
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Priority:</label>
+        <label for="editPriority" style="display: block; font-weight: 600; color: #34495e; margin-bottom: 5px;">Priority:</label>
         <select id="editPriority" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 6px;">
           <option value="Low">Low</option>
           <option value="Medium">Medium</option>

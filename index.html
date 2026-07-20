@@ -104,7 +104,7 @@
   
   <form id="serviceForm" style="display: none;">
     <div style="display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 16px 20px; align-items: center;">
-      <label style="text-align: right; font-weight: 500; color: #34495e;">Vehicle ID:</label>
+      <label for="vehicleIdSelect" style="text-align: right; font-weight: 500; color: #34495e;">Vehicle ID:</label>
       <div>
         <select id="vehicleIdSelect" required style="width: 100%;">
           <option value="">Select Vehicle</option>
@@ -120,10 +120,10 @@
         </select>
         <input type="text" id="vehicleIdOther" placeholder="Enter vehicle" style="display:none; margin-top:6px; width: 100%;" />
       </div>
-      <label style="text-align: right; font-weight: 500; color: #34495e;">Cost (USD):</label>
+      <label for="serviceCost" style="text-align: right; font-weight: 500; color: #34495e;">Cost (USD):</label>
       <input type="number" id="serviceCost" step="0.01" required style="width: 100%;" />
       
-      <label style="text-align: right; font-weight: 500; color: #34495e;">Service Type:</label>
+      <label for="serviceTypeSelect" style="text-align: right; font-weight: 500; color: #34495e;">Service Type:</label>
       <div>
         <select id="serviceTypeSelect" required style="width: 100%;">
           <option value="">Select Service Type</option>
@@ -134,12 +134,12 @@
         </select>
         <input type="text" id="serviceTypeOther" placeholder="Enter service type" style="display:none; margin-top:6px; width: 100%;" />
       </div>
-      <label style="text-align: right; font-weight: 500; color: #34495e;">Cause:</label>
+      <label for="serviceCause" style="text-align: right; font-weight: 500; color: #34495e;">Cause:</label>
       <input type="text" id="serviceCause" required style="width: 100%;" />
       
-      <label style="text-align: right; font-weight: 500; color: #34495e;">Date:</label>
+      <label for="serviceDate" style="text-align: right; font-weight: 500; color: #34495e;">Date:</label>
       <input type="date" id="serviceDate" required style="width: 100%;" />
-      <label style="text-align: right; font-weight: 500; color: #34495e;">Notes:</label>
+      <label for="serviceNotes" style="text-align: right; font-weight: 500; color: #34495e;">Notes:</label>
       <input type="text" id="serviceNotes" style="width: 100%;" />
     </div>
     <div style="margin-top: 20px; text-align: center;">
@@ -151,23 +151,23 @@
     <h3 style="margin-top: 0; color: #2c3e50; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">Filter Entries</h3>
     <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end;">
       <div style="flex: 1; min-width: 180px;">
-        <label style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">Vehicle ID:</label>
+        <label for="filterVehicleId" style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">Vehicle ID:</label>
         <select id="filterVehicleId" style="font-family: 'Roboto', 'Montserrat', Arial, sans-serif; font-size: 1rem; padding: 7px 10px; border: 1px solid #bfc9d1; border-radius: 6px; background: #f7f9fa; width: 100%; transition: border-color 0.2s;">
           <option value="">All Vehicles</option>
         </select>
       </div>
       <div style="flex: 1; min-width: 180px;">
-        <label style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">Service Type:</label>
+        <label for="filterServiceType" style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">Service Type:</label>
         <select id="filterServiceType" style="font-family: 'Roboto', 'Montserrat', Arial, sans-serif; font-size: 1rem; padding: 7px 10px; border: 1px solid #bfc9d1; border-radius: 6px; background: #f7f9fa; width: 100%; transition: border-color 0.2s;">
           <option value="">All Types</option>
         </select>
       </div>
       <div style="flex: 1; min-width: 140px;">
-        <label style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">From Date:</label>
+        <label for="filterDateFrom" style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">From Date:</label>
         <input type="date" id="filterDateFrom" style="font-family: 'Roboto', 'Montserrat', Arial, sans-serif; font-size: 1rem; padding: 7px 10px; border: 1px solid #bfc9d1; border-radius: 6px; background: #f7f9fa; width: 100%; transition: border-color 0.2s;" />
       </div>
       <div style="flex: 1; min-width: 140px;">
-        <label style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">To Date:</label>
+        <label for="filterDateTo" style="font-weight: 500; color: #34495e; margin-bottom: 6px; display: block; font-family: 'Montserrat', 'Roboto', Arial, sans-serif;">To Date:</label>
         <input type="date" id="filterDateTo" style="font-family: 'Roboto', 'Montserrat', Arial, sans-serif; font-size: 1rem; padding: 7px 10px; border: 1px solid #bfc9d1; border-radius: 6px; background: #f7f9fa; width: 100%; transition: border-color 0.2s;" />
       </div>
       <button id="filterBtn" style="background: #2980b9; color: #fff; border: none; cursor: pointer; font-weight: 600; padding: 7px 16px; border-radius: 6px; box-shadow: 0 1px 4px rgba(44,62,80,0.08); transition: background 0.2s; font-family: 'Montserrat', 'Roboto', Arial, sans-serif; letter-spacing: 0.5px;">Filter</button>
