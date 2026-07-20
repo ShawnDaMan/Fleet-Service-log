@@ -31,7 +31,15 @@ async function initializeGapiClient() {
     discoveryDocs: READINESS_CONFIG.discoveryDocs,
   });
   gapiInited = true;
-  
+
+  // Restore token from localStorage if still valid
+  const storedToken = localStorage.getItem('google_access_token');
+  const tokenExpiry = localStorage.getItem('google_token_expiry');
+  if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+    accessToken = storedToken;
+    gapi.client.setToken({ access_token: accessToken });
+  }
+
   // Check if elements exist, if not wait
   const checkAndLoad = () => {
     const grid = document.getElementById('readinessGrid');
@@ -852,7 +860,7 @@ async function submitNewIssue() {
       reporterName, // Written Up By
       priority, // Priority of Issue
       reporterName, // Submitted By
-      new Date().toISOString(), // Timestamp
+      new Date().toLocaleString('en-US'), // Timestamp
       '', // blank column
       '', // Date Reviewed (empty - new issue)
       notes // Noted Issues

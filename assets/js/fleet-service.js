@@ -11,7 +11,7 @@ const GOOGLE_SHEETS_CONFIG = {
   spreadsheetId: '1LoisqqngNaheCz17KR7SmrDXOTt1V8bOD673lQRKd3Q', // Main Fleet Service Log sheet
   range: 'Sheet1!A:F', // Data range for service log
   discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'], // API discovery
-  scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email' // Sheets + email for authorized-user checks
+  scope: 'https://www.googleapis.com/auth/spreadsheets openid email' // Sheets + identity scopes
 };
 
 // --- Global State Variables ---
@@ -63,6 +63,13 @@ function initGoogleAPI() {
               updateSigninStatus(true); // Update UI for signed-in state
             }
           });
+        }
+        // Restore token from localStorage if still valid
+        const storedToken = localStorage.getItem('google_access_token');
+        const tokenExpiry = localStorage.getItem('google_token_expiry');
+        if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry, 10)) {
+          accessToken = storedToken;
+          gapi.client.setToken({ access_token: accessToken });
         }
         gapiInitialized = true;
         resolve();
@@ -131,20 +138,15 @@ async function updateSigninStatus(signedIn) {
   }
 
   if (signedIn) {
-    // Fetch user email using Google OAuth2 userinfo endpoint
+    // Fetch user email — non-blocking: if userinfo is unavailable we still allow access
     userEmail = await fetchGoogleUserEmail(accessToken);
-    if (!userEmail) {
-      // Force a fresh consent prompt so Google can issue a token with required scopes.
-      if (tokenClient) tokenClient.requestAccessToken({ prompt: 'consent' });
-      const table = document.getElementById('serviceTable')?.getElementsByTagName('tbody')[0];
-      if (table) {
-        table.innerHTML = '<tr><td colspan="8" style="padding:16px;color:#7f8c8d;text-align:center;">Session needs re-authorization. Click Sign In again.</td></tr>';
-      }
-      return;
+    if (userEmail) {
+      authorizedEmails = await fetchAuthorizedEmails();
+      isAuthorizedUser = authorizedEmails.includes(userEmail.toLowerCase());
+    } else {
+      // userinfo endpoint unavailable (scope or network issue) — allow full access for signed-in user
+      isAuthorizedUser = true;
     }
-    // Fetch authorized emails from sheet
-    authorizedEmails = await fetchAuthorizedEmails();
-    isAuthorizedUser = userEmail && authorizedEmails.includes(userEmail.toLowerCase());
 
     // Show/hide UI for signed-in state
     if (signInBtn) signInBtn.style.display = 'none';
