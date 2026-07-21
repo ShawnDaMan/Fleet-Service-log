@@ -21,66 +21,151 @@ let rowsPerPage = 50;
 let allIssuesData = [];
 let discoveredVehicles = [];
 
-const VEHICLE_PREFS_KEY = 'vehicle_readiness_display_prefs_v1';
-let vehicleDisplayPrefs = {
-  addedVehicles: [],
-  hiddenVehicles: []
-};
+const VEHICLE_REGISTRY_SHEET = 'Vehicle Registry';
+const VEHICLE_REGISTRY_HEADERS = ['Year', 'Make', 'Model', 'Trim', 'VIN', 'Color', 'Active'];
+let vehicleRegistryRows = [];
 
 function normalizeVehicleName(name) {
   return (name || '').trim().replace(/\s+/g, ' ');
 }
 
-function loadVehicleDisplayPrefs() {
-  try {
-    const raw = localStorage.getItem(VEHICLE_PREFS_KEY);
-    if (!raw) return;
+function parseVehicleName(vehicleName) {
+  const normalized = normalizeVehicleName(vehicleName);
+  if (!normalized) return { make: '', model: '' };
 
-    const parsed = JSON.parse(raw);
-    vehicleDisplayPrefs.addedVehicles = Array.isArray(parsed.addedVehicles)
-      ? parsed.addedVehicles.map(normalizeVehicleName).filter(Boolean)
-      : [];
-    vehicleDisplayPrefs.hiddenVehicles = Array.isArray(parsed.hiddenVehicles)
-      ? parsed.hiddenVehicles.map(normalizeVehicleName).filter(Boolean)
-      : [];
-  } catch (error) {
-    console.warn('Unable to load vehicle display preferences:', error);
+  const parts = normalized.split(' ');
+  return {
+    make: parts[0] || '',
+    model: parts.slice(1).join(' ') || ''
+  };
+}
+
+function buildVehicleKey(make, model) {
+  return normalizeVehicleName(`${make || ''} ${model || ''}`);
+}
+
+function buildVehicleTitle(vehicleRow) {
+  const base = normalizeVehicleName(`${vehicleRow.year || ''} ${vehicleRow.make || ''} ${vehicleRow.model || ''} ${vehicleRow.trim || ''}`);
+  const fallback = buildVehicleKey(vehicleRow.make, vehicleRow.model);
+  return base || fallback;
+}
+
+function isVehicleActive(activeValue) {
+  const value = (activeValue || '').toString().trim().toLowerCase();
+  return value === '' || value === 'yes' || value === 'y' || value === 'true' || value === '1';
+}
+
+async function ensureVehicleRegistrySheet() {
+  const metadataResponse = await gapi.client.sheets.spreadsheets.get({
+    spreadsheetId: READINESS_CONFIG.spreadsheetId,
+    fields: 'sheets.properties'
+  });
+
+  const sheets = metadataResponse.result.sheets || [];
+  const existingSheet = sheets.find(s => s.properties?.title === VEHICLE_REGISTRY_SHEET);
+
+  if (!existingSheet) {
+    await gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      resource: {
+        requests: [{
+          addSheet: {
+            properties: {
+              title: VEHICLE_REGISTRY_SHEET
+            }
+          }
+        }]
+      }
+    });
+  }
+
+  const headerResponse = await gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: READINESS_CONFIG.spreadsheetId,
+    range: `${VEHICLE_REGISTRY_SHEET}!A1:G1`
+  });
+
+  const headerRow = (headerResponse.result.values && headerResponse.result.values[0]) || [];
+  const headersMatch = VEHICLE_REGISTRY_HEADERS.every((header, index) => (headerRow[index] || '').trim() === header);
+
+  if (!headersMatch) {
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: `${VEHICLE_REGISTRY_SHEET}!A1:G1`,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: [VEHICLE_REGISTRY_HEADERS] }
+    });
   }
 }
 
-function saveVehicleDisplayPrefs() {
-  const dedupedAdded = Array.from(new Set(vehicleDisplayPrefs.addedVehicles.map(normalizeVehicleName).filter(Boolean))).sort();
-  const dedupedHidden = Array.from(new Set(vehicleDisplayPrefs.hiddenVehicles.map(normalizeVehicleName).filter(Boolean))).sort();
+async function loadVehicleRegistryRows() {
+  await ensureVehicleRegistrySheet();
 
-  vehicleDisplayPrefs = {
-    addedVehicles: dedupedAdded,
-    hiddenVehicles: dedupedHidden
-  };
-
-  localStorage.setItem(VEHICLE_PREFS_KEY, JSON.stringify(vehicleDisplayPrefs));
-}
-
-function getDisplayVehicles(baseVehicles) {
-  const hiddenSet = new Set(vehicleDisplayPrefs.hiddenVehicles);
-  const merged = new Set((baseVehicles || []).map(normalizeVehicleName).filter(Boolean));
-
-  vehicleDisplayPrefs.addedVehicles.forEach(v => {
-    const normalized = normalizeVehicleName(v);
-    if (normalized) merged.add(normalized);
+  const response = await gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: READINESS_CONFIG.spreadsheetId,
+    range: `${VEHICLE_REGISTRY_SHEET}!A2:G`
   });
 
-  return Array.from(merged)
-    .filter(v => !hiddenSet.has(v))
-    .sort();
+  const rows = response.result.values || [];
+  return rows
+    .map((row, index) => {
+      const year = (row[0] || '').trim();
+      const make = (row[1] || '').trim();
+      const model = (row[2] || '').trim();
+      const trim = (row[3] || '').trim();
+      const vin = (row[4] || '').trim();
+      const color = (row[5] || '').trim();
+      const active = (row[6] || 'Yes').trim();
+      const key = buildVehicleKey(make, model);
+
+      if (!key) return null;
+
+      return {
+        rowIndex: index + 2,
+        year,
+        make,
+        model,
+        trim,
+        vin,
+        color,
+        active,
+        key,
+        title: buildVehicleTitle({ year, make, model, trim })
+      };
+    })
+    .filter(Boolean);
 }
 
-function getKnownVehicles() {
-  const merged = new Set((discoveredVehicles || []).map(normalizeVehicleName).filter(Boolean));
-  vehicleDisplayPrefs.addedVehicles.forEach(v => {
-    const normalized = normalizeVehicleName(v);
-    if (normalized) merged.add(normalized);
+async function seedVehicleRegistry(discoveredVehicleNames) {
+  const values = (discoveredVehicleNames || [])
+    .map(name => parseVehicleName(name))
+    .filter(parts => parts.make && parts.model)
+    .map(parts => ['', parts.make, parts.model, '', '', '', 'Yes']);
+
+  if (values.length === 0) {
+    return;
+  }
+
+  await gapi.client.sheets.spreadsheets.values.append({
+    spreadsheetId: READINESS_CONFIG.spreadsheetId,
+    range: `${VEHICLE_REGISTRY_SHEET}!A:G`,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values }
   });
-  return Array.from(merged).sort();
+}
+
+function getDisplayVehiclesFromRegistry() {
+  if (!vehicleRegistryRows.length) {
+    return discoveredVehicles.slice().sort();
+  }
+
+  const activeKeys = new Set(
+    vehicleRegistryRows
+      .filter(row => isVehicleActive(row.active))
+      .map(row => row.key)
+      .filter(Boolean)
+  );
+
+  return Array.from(activeKeys).sort();
 }
 
 // Initialize Google API
@@ -220,6 +305,7 @@ async function loadReadinessData() {
     }
 
     const issuesByVehicle = {};
+    const discoveredSet = new Set();
     
     rows.slice(1).forEach((row, index) => {
       const vehicleMake = (row[1] || '').trim();
@@ -227,6 +313,7 @@ async function loadReadinessData() {
       const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' ');
       
       if (!vehicleName) return;
+      discoveredSet.add(vehicleName);
       
       const issue = {
         rowIndex: index + 2,
@@ -250,7 +337,15 @@ async function loadReadinessData() {
       issuesByVehicle[vehicleName].push(issue);
     });
 
-    displayReadinessCards(issuesByVehicle, rows);
+    discoveredVehicles = Array.from(discoveredSet).sort();
+    vehicleRegistryRows = await loadVehicleRegistryRows();
+
+    if (vehicleRegistryRows.length === 0 && discoveredVehicles.length > 0) {
+      await seedVehicleRegistry(discoveredVehicles);
+      vehicleRegistryRows = await loadVehicleRegistryRows();
+    }
+
+    displayReadinessCards(issuesByVehicle);
     displayIssuesTable(rows);
   } catch (error) {
     console.error('Error loading readiness data:', error);
@@ -269,7 +364,7 @@ async function loadReadinessData() {
   }
 }
 
-function displayReadinessCards(issuesByVehicle, allRows) {
+function displayReadinessCards(issuesByVehicle) {
   try {
     const grid = document.getElementById('readinessGrid');
     
@@ -284,21 +379,7 @@ function displayReadinessCards(issuesByVehicle, allRows) {
   let warningCount = 0;
   let notReadyCount = 0;
 
-  const allVehicles = new Set();
-  
-  if (allRows && allRows.length > 1) {
-    allRows.slice(1).forEach((row) => {
-      const vehicleMake = (row[1] || '').trim();
-      const vehicleModel = (row[2] || '').trim();
-      const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' ');
-      if (vehicleName) {
-        allVehicles.add(vehicleName);
-      }
-    });
-  }
-  
-  discoveredVehicles = Array.from(allVehicles).sort();
-  const displayVehicles = getDisplayVehicles(discoveredVehicles);
+  const displayVehicles = getDisplayVehiclesFromRegistry();
 
   populateVehicleDropdown(displayVehicles);
   renderVehicleManagerList();
@@ -858,6 +939,12 @@ function closeAddIssueModal() {
 }
 
 function showVehicleManagerModal() {
+  if (!accessToken) {
+    alert('Please sign in with Google to manage vehicles.');
+    handleSignIn();
+    return;
+  }
+
   renderVehicleManagerList();
   const modal = document.getElementById('vehicleManagerModal');
   if (modal) {
@@ -876,53 +963,56 @@ function renderVehicleManagerList() {
   const listEl = document.getElementById('vehicleManagerList');
   if (!listEl) return;
 
-  const knownVehicles = getKnownVehicles();
-  const hiddenSet = new Set(vehicleDisplayPrefs.hiddenVehicles);
-
-  if (knownVehicles.length === 0) {
-    listEl.innerHTML = '<div style="color: #7f8c8d; text-align: center; padding: 12px;">No vehicles found yet.</div>';
+  if (!vehicleRegistryRows.length) {
+    listEl.innerHTML = '<div style="color: #7f8c8d; text-align: center; padding: 12px;">No vehicles in registry yet. Add one below.</div>';
     return;
   }
 
   listEl.innerHTML = '';
-  knownVehicles.forEach(vehicleName => {
-    const isHidden = hiddenSet.has(vehicleName);
-    const isCustom = vehicleDisplayPrefs.addedVehicles.includes(vehicleName);
+  vehicleRegistryRows
+    .slice()
+    .sort((a, b) => a.title.localeCompare(b.title))
+    .forEach(vehicle => {
+    const isActive = isVehicleActive(vehicle.active);
 
     const row = document.createElement('div');
     row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #ecf0f1;';
 
     const nameWrap = document.createElement('div');
-    nameWrap.style.cssText = 'display: flex; align-items: center; gap: 8px; min-width: 0;';
+    nameWrap.style.cssText = 'display: flex; flex-direction: column; gap: 3px; min-width: 0;';
 
     const name = document.createElement('span');
-    name.textContent = vehicleName;
-    name.style.cssText = `font-weight: 600; color: ${isHidden ? '#95a5a6' : '#2c3e50'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`;
+    name.textContent = vehicle.title;
+    name.style.cssText = `font-weight: 600; color: ${isActive ? '#2c3e50' : '#95a5a6'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`;
     nameWrap.appendChild(name);
 
-    if (isCustom) {
-      const tag = document.createElement('span');
-      tag.textContent = 'Custom';
-      tag.style.cssText = 'font-size: 0.75rem; background: #e8f4fd; color: #1f618d; border-radius: 999px; padding: 2px 8px;';
-      nameWrap.appendChild(tag);
-    }
+    const detail = document.createElement('span');
+    const detailParts = [];
+    if (vehicle.vin) detailParts.push(`VIN: ${vehicle.vin}`);
+    if (vehicle.color) detailParts.push(`Color: ${vehicle.color}`);
+    if (vehicle.trim) detailParts.push(`Trim: ${vehicle.trim}`);
+    detail.textContent = detailParts.length ? detailParts.join(' | ') : 'No extra details';
+    detail.style.cssText = 'font-size: 0.8rem; color: #7f8c8d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+    nameWrap.appendChild(detail);
 
     const actions = document.createElement('div');
     actions.style.cssText = 'display: flex; gap: 8px; flex-shrink: 0;';
 
     const toggleBtn = document.createElement('button');
-    toggleBtn.textContent = isHidden ? 'Show' : 'Hide';
-    toggleBtn.style.cssText = `padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: white; background: ${isHidden ? '#27ae60' : '#95a5a6'};`;
-    toggleBtn.onclick = () => toggleVehicleVisibility(vehicleName);
+    toggleBtn.textContent = isActive ? 'Hide' : 'Show';
+    toggleBtn.style.cssText = `padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: white; background: ${isActive ? '#95a5a6' : '#27ae60'};`;
+    toggleBtn.onclick = async () => {
+      await setVehicleRegistryActive(vehicle.rowIndex, !isActive);
+    };
     actions.appendChild(toggleBtn);
 
-    if (isCustom) {
-      const removeBtn = document.createElement('button');
-      removeBtn.textContent = 'Remove';
-      removeBtn.style.cssText = 'padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: white; background: #e74c3c;';
-      removeBtn.onclick = () => removeCustomVehicle(vehicleName);
-      actions.appendChild(removeBtn);
-    }
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = 'Remove';
+    removeBtn.style.cssText = 'padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: white; background: #e74c3c;';
+    removeBtn.onclick = async () => {
+      await removeVehicleRegistryRow(vehicle.rowIndex, vehicle.title);
+    };
+    actions.appendChild(removeBtn);
 
     row.appendChild(nameWrap);
     row.appendChild(actions);
@@ -930,51 +1020,83 @@ function renderVehicleManagerList() {
   });
 }
 
-function addVehicleToDisplay() {
-  const input = document.getElementById('vehicleManagerInput');
-  if (!input) return;
+async function addVehicleToDisplay() {
+  const year = (document.getElementById('vehicleYearInput')?.value || '').trim();
+  const make = (document.getElementById('vehicleMakeInput')?.value || '').trim();
+  const model = (document.getElementById('vehicleModelInput')?.value || '').trim();
+  const trim = (document.getElementById('vehicleTrimInput')?.value || '').trim();
+  const vin = (document.getElementById('vehicleVinInput')?.value || '').trim();
+  const color = (document.getElementById('vehicleColorInput')?.value || '').trim();
 
-  const vehicleName = normalizeVehicleName(input.value);
-  if (!vehicleName) {
-    alert('Enter a vehicle name first.');
+  if (!make || !model) {
+    alert('Make and Model are required.');
     return;
   }
 
-  const knownSet = new Set(getKnownVehicles());
-  if (!knownSet.has(vehicleName)) {
-    vehicleDisplayPrefs.addedVehicles.push(vehicleName);
-  }
-
-  vehicleDisplayPrefs.hiddenVehicles = vehicleDisplayPrefs.hiddenVehicles.filter(v => v !== vehicleName);
-  saveVehicleDisplayPrefs();
-  input.value = '';
-  renderVehicleManagerList();
-  loadReadinessData();
-}
-
-function toggleVehicleVisibility(vehicleName) {
-  const hiddenSet = new Set(vehicleDisplayPrefs.hiddenVehicles);
-  if (hiddenSet.has(vehicleName)) {
-    vehicleDisplayPrefs.hiddenVehicles = vehicleDisplayPrefs.hiddenVehicles.filter(v => v !== vehicleName);
-  } else {
-    vehicleDisplayPrefs.hiddenVehicles.push(vehicleName);
-  }
-
-  saveVehicleDisplayPrefs();
-  renderVehicleManagerList();
-  loadReadinessData();
-}
-
-function removeCustomVehicle(vehicleName) {
-  if (!confirm(`Remove ${vehicleName} from custom display vehicles?`)) {
+  const key = buildVehicleKey(make, model);
+  const alreadyExists = vehicleRegistryRows.some(row => row.key === key);
+  if (alreadyExists) {
+    alert('That vehicle already exists in the shared registry.');
     return;
   }
 
-  vehicleDisplayPrefs.addedVehicles = vehicleDisplayPrefs.addedVehicles.filter(v => v !== vehicleName);
-  vehicleDisplayPrefs.hiddenVehicles = vehicleDisplayPrefs.hiddenVehicles.filter(v => v !== vehicleName);
-  saveVehicleDisplayPrefs();
-  renderVehicleManagerList();
-  loadReadinessData();
+  try {
+    await gapi.client.sheets.spreadsheets.values.append({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: `${VEHICLE_REGISTRY_SHEET}!A:G`,
+      valueInputOption: 'USER_ENTERED',
+      resource: {
+        values: [[year, make, model, trim, vin, color, 'Yes']]
+      }
+    });
+
+    ['vehicleYearInput', 'vehicleMakeInput', 'vehicleModelInput', 'vehicleTrimInput', 'vehicleVinInput', 'vehicleColorInput']
+      .forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+
+    await loadReadinessData();
+  } catch (error) {
+    console.error('Error adding vehicle to registry:', error);
+    alert('Could not add vehicle. Please try again.');
+  }
+}
+
+async function setVehicleRegistryActive(rowIndex, isActive) {
+  try {
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: `${VEHICLE_REGISTRY_SHEET}!G${rowIndex}`,
+      valueInputOption: 'USER_ENTERED',
+      resource: {
+        values: [[isActive ? 'Yes' : 'No']]
+      }
+    });
+
+    await loadReadinessData();
+  } catch (error) {
+    console.error('Error updating vehicle visibility:', error);
+    alert('Could not update vehicle visibility. Please try again.');
+  }
+}
+
+async function removeVehicleRegistryRow(rowIndex, vehicleTitle) {
+  if (!confirm(`Remove ${vehicleTitle} from the shared vehicle registry?`)) {
+    return;
+  }
+
+  try {
+    await gapi.client.sheets.spreadsheets.values.clear({
+      spreadsheetId: READINESS_CONFIG.spreadsheetId,
+      range: `${VEHICLE_REGISTRY_SHEET}!A${rowIndex}:G${rowIndex}`
+    });
+
+    await loadReadinessData();
+  } catch (error) {
+    console.error('Error removing vehicle row:', error);
+    alert('Could not remove vehicle. Please try again.');
+  }
 }
 
 function toggleOtherField() {
@@ -1073,10 +1195,6 @@ window.gisLoaded = gisLoaded;
 window.showVehicleManagerModal = showVehicleManagerModal;
 window.closeVehicleManagerModal = closeVehicleManagerModal;
 window.addVehicleToDisplay = addVehicleToDisplay;
-window.toggleVehicleVisibility = toggleVehicleVisibility;
-window.removeCustomVehicle = removeCustomVehicle;
-
-loadVehicleDisplayPrefs();
 
 // Poll for script availability
 const checkScriptsLoaded = setInterval(() => {
