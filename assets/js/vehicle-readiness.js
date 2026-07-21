@@ -247,34 +247,33 @@ function displayReadinessCards(issuesByVehicle, allRows) {
       .filter(issue => issue.manualStatus)
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
 
-    let status = 'ready';
-    let statusText = 'Ready';
-    let cardClass = 'vehicle-card';
-
+    // Base readiness is used for summary counts and remains issue-driven.
+    let baseStatus = 'ready';
     if (highPriorityUnreviewed) {
-      status = 'not-ready';
-      statusText = 'Not Ready';
-      cardClass = 'vehicle-card not-ready';
+      baseStatus = 'not-ready';
       notReadyCount++;
     } else if (anyUnreviewed) {
-      status = 'warning';
-      statusText = 'Needs Attention';
-      cardClass = 'vehicle-card warning';
+      baseStatus = 'warning';
       warningCount++;
-    } else if (latestStatusOverride) {
+    } else {
+      readyCount++;
+    }
+
+    // Card display can be manually overridden without changing summary totals.
+    let status = baseStatus;
+    let statusText = baseStatus === 'not-ready' ? 'Not Ready' : baseStatus === 'warning' ? 'Needs Attention' : 'Ready';
+    let cardClass = baseStatus === 'not-ready' ? 'vehicle-card not-ready' : baseStatus === 'warning' ? 'vehicle-card warning' : 'vehicle-card';
+
+    if (latestStatusOverride) {
       if (latestStatusOverride.manualStatus.toLowerCase().includes('not ready')) {
         status = 'not-ready';
         statusText = 'Not Ready (Manual)';
         cardClass = 'vehicle-card not-ready';
-        notReadyCount++;
       } else {
         status = 'ready';
-        statusText = 'Ready (Manual)';
+        statusText = 'Ready';
         cardClass = 'vehicle-card';
-        readyCount++;
       }
-    } else {
-      readyCount++;
     }
 
     const card = document.createElement('div');
