@@ -181,6 +181,7 @@
     <button id="readinessSignInBtn" style="background: #2980b9; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: 10px;" onclick="handleSignIn()">Sign In with Google</button>
     <button id="readinessSignOutBtn" style="background: #db4437; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: 10px; display: none;" onclick="handleSignOut()">Sign Out</button>
     <button id="addIssueBtn" style="background: #e74c3c; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: 10px;" onclick="showAddIssueModal()">+ Report Issue</button>
+    <button id="manageVehiclesBtn" style="background: #16a085; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: 10px;" onclick="showVehicleManagerModal()">Manage Vehicles</button>
   </div>
 
   <!-- Add Issue Modal -->
@@ -234,6 +235,25 @@
       <div style="display: flex; gap: 10px; justify-content: flex-end;">
         <button onclick="closeAddIssueModal()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
         <button onclick="submitNewIssue()" style="padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Report Issue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vehicle Manager Modal -->
+  <div id="vehicleManagerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; padding: 24px; border-radius: 12px; max-width: 620px; width: 92%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+      <h3 style="margin-top: 0; color: #2c3e50;">Manage Vehicles In Display</h3>
+      <p style="color: #7f8c8d; margin-top: 0; font-size: 0.9rem;">Hide vehicles you do not want to show, or add custom vehicles for future use. Changes are saved in this browser.</p>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+        <input id="vehicleManagerInput" type="text" placeholder="Example: Ford Transit" style="flex: 1; min-width: 220px; padding: 10px; border: 1px solid #bdc3c7; border-radius: 6px;">
+        <button onclick="addVehicleToDisplay()" style="padding: 10px 16px; background: #16a085; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">+ Add Vehicle</button>
+      </div>
+
+      <div id="vehicleManagerList" style="border: 1px solid #ecf0f1; border-radius: 8px; padding: 6px 12px; background: #fafcfd; min-height: 80px;"></div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+        <button onclick="closeVehicleManagerModal()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Close</button>
       </div>
     </div>
   </div>
@@ -347,6 +367,6 @@
     </div>
   </div>
 
-  <script src="assets/js/vehicle-readiness.js?v=20260721"></script>
+  <script src="assets/js/vehicle-readiness.js?v=20260721b"></script>
 </body>
 </html>

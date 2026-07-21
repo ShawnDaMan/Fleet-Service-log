@@ -19,6 +19,69 @@ let autoRefreshInterval = null;
 let currentPage = 1;
 let rowsPerPage = 50;
 let allIssuesData = [];
+let discoveredVehicles = [];
+
+const VEHICLE_PREFS_KEY = 'vehicle_readiness_display_prefs_v1';
+let vehicleDisplayPrefs = {
+  addedVehicles: [],
+  hiddenVehicles: []
+};
+
+function normalizeVehicleName(name) {
+  return (name || '').trim().replace(/\s+/g, ' ');
+}
+
+function loadVehicleDisplayPrefs() {
+  try {
+    const raw = localStorage.getItem(VEHICLE_PREFS_KEY);
+    if (!raw) return;
+
+    const parsed = JSON.parse(raw);
+    vehicleDisplayPrefs.addedVehicles = Array.isArray(parsed.addedVehicles)
+      ? parsed.addedVehicles.map(normalizeVehicleName).filter(Boolean)
+      : [];
+    vehicleDisplayPrefs.hiddenVehicles = Array.isArray(parsed.hiddenVehicles)
+      ? parsed.hiddenVehicles.map(normalizeVehicleName).filter(Boolean)
+      : [];
+  } catch (error) {
+    console.warn('Unable to load vehicle display preferences:', error);
+  }
+}
+
+function saveVehicleDisplayPrefs() {
+  const dedupedAdded = Array.from(new Set(vehicleDisplayPrefs.addedVehicles.map(normalizeVehicleName).filter(Boolean))).sort();
+  const dedupedHidden = Array.from(new Set(vehicleDisplayPrefs.hiddenVehicles.map(normalizeVehicleName).filter(Boolean))).sort();
+
+  vehicleDisplayPrefs = {
+    addedVehicles: dedupedAdded,
+    hiddenVehicles: dedupedHidden
+  };
+
+  localStorage.setItem(VEHICLE_PREFS_KEY, JSON.stringify(vehicleDisplayPrefs));
+}
+
+function getDisplayVehicles(baseVehicles) {
+  const hiddenSet = new Set(vehicleDisplayPrefs.hiddenVehicles);
+  const merged = new Set((baseVehicles || []).map(normalizeVehicleName).filter(Boolean));
+
+  vehicleDisplayPrefs.addedVehicles.forEach(v => {
+    const normalized = normalizeVehicleName(v);
+    if (normalized) merged.add(normalized);
+  });
+
+  return Array.from(merged)
+    .filter(v => !hiddenSet.has(v))
+    .sort();
+}
+
+function getKnownVehicles() {
+  const merged = new Set((discoveredVehicles || []).map(normalizeVehicleName).filter(Boolean));
+  vehicleDisplayPrefs.addedVehicles.forEach(v => {
+    const normalized = normalizeVehicleName(v);
+    if (normalized) merged.add(normalized);
+  });
+  return Array.from(merged).sort();
+}
 
 // Initialize Google API
 function gapiLoaded() {
@@ -234,11 +297,13 @@ function displayReadinessCards(issuesByVehicle, allRows) {
     });
   }
   
-  const sortedVehicles = Array.from(allVehicles).sort();
-  
-  populateVehicleDropdown(sortedVehicles);
-  
-  Array.from(allVehicles).sort().forEach(vehicleName => {
+  discoveredVehicles = Array.from(allVehicles).sort();
+  const displayVehicles = getDisplayVehicles(discoveredVehicles);
+
+  populateVehicleDropdown(displayVehicles);
+  renderVehicleManagerList();
+
+  displayVehicles.forEach(vehicleName => {
     const issues = issuesByVehicle[vehicleName] || [];
     const unreviewedIssues = issues.filter(issue => !issue.dateReviewed);
     const highPriorityUnreviewed = unreviewedIssues.some(issue => (issue.priority || '').toLowerCase() === 'high');
@@ -792,6 +857,126 @@ function closeAddIssueModal() {
   document.getElementById('otherIssueField').style.display = 'none';
 }
 
+function showVehicleManagerModal() {
+  renderVehicleManagerList();
+  const modal = document.getElementById('vehicleManagerModal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function closeVehicleManagerModal() {
+  const modal = document.getElementById('vehicleManagerModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function renderVehicleManagerList() {
+  const listEl = document.getElementById('vehicleManagerList');
+  if (!listEl) return;
+
+  const knownVehicles = getKnownVehicles();
+  const hiddenSet = new Set(vehicleDisplayPrefs.hiddenVehicles);
+
+  if (knownVehicles.length === 0) {
+    listEl.innerHTML = '<div style="color: #7f8c8d; text-align: center; padding: 12px;">No vehicles found yet.</div>';
+    return;
+  }
+
+  listEl.innerHTML = '';
+  knownVehicles.forEach(vehicleName => {
+    const isHidden = hiddenSet.has(vehicleName);
+    const isCustom = vehicleDisplayPrefs.addedVehicles.includes(vehicleName);
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #ecf0f1;';
+
+    const nameWrap = document.createElement('div');
+    nameWrap.style.cssText = 'display: flex; align-items: center; gap: 8px; min-width: 0;';
+
+    const name = document.createElement('span');
+    name.textContent = vehicleName;
+    name.style.cssText = `font-weight: 600; color: ${isHidden ? '#95a5a6' : '#2c3e50'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`;
+    nameWrap.appendChild(name);
+
+    if (isCustom) {
+      const tag = document.createElement('span');
+      tag.textContent = 'Custom';
+      tag.style.cssText = 'font-size: 0.75rem; background: #e8f4fd; color: #1f618d; border-radius: 999px; padding: 2px 8px;';
+      nameWrap.appendChild(tag);
+    }
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display: flex; gap: 8px; flex-shrink: 0;';
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.textContent = isHidden ? 'Show' : 'Hide';
+    toggleBtn.style.cssText = `padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: white; background: ${isHidden ? '#27ae60' : '#95a5a6'};`;
+    toggleBtn.onclick = () => toggleVehicleVisibility(vehicleName);
+    actions.appendChild(toggleBtn);
+
+    if (isCustom) {
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = 'Remove';
+      removeBtn.style.cssText = 'padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: white; background: #e74c3c;';
+      removeBtn.onclick = () => removeCustomVehicle(vehicleName);
+      actions.appendChild(removeBtn);
+    }
+
+    row.appendChild(nameWrap);
+    row.appendChild(actions);
+    listEl.appendChild(row);
+  });
+}
+
+function addVehicleToDisplay() {
+  const input = document.getElementById('vehicleManagerInput');
+  if (!input) return;
+
+  const vehicleName = normalizeVehicleName(input.value);
+  if (!vehicleName) {
+    alert('Enter a vehicle name first.');
+    return;
+  }
+
+  const knownSet = new Set(getKnownVehicles());
+  if (!knownSet.has(vehicleName)) {
+    vehicleDisplayPrefs.addedVehicles.push(vehicleName);
+  }
+
+  vehicleDisplayPrefs.hiddenVehicles = vehicleDisplayPrefs.hiddenVehicles.filter(v => v !== vehicleName);
+  saveVehicleDisplayPrefs();
+  input.value = '';
+  renderVehicleManagerList();
+  loadReadinessData();
+}
+
+function toggleVehicleVisibility(vehicleName) {
+  const hiddenSet = new Set(vehicleDisplayPrefs.hiddenVehicles);
+  if (hiddenSet.has(vehicleName)) {
+    vehicleDisplayPrefs.hiddenVehicles = vehicleDisplayPrefs.hiddenVehicles.filter(v => v !== vehicleName);
+  } else {
+    vehicleDisplayPrefs.hiddenVehicles.push(vehicleName);
+  }
+
+  saveVehicleDisplayPrefs();
+  renderVehicleManagerList();
+  loadReadinessData();
+}
+
+function removeCustomVehicle(vehicleName) {
+  if (!confirm(`Remove ${vehicleName} from custom display vehicles?`)) {
+    return;
+  }
+
+  vehicleDisplayPrefs.addedVehicles = vehicleDisplayPrefs.addedVehicles.filter(v => v !== vehicleName);
+  vehicleDisplayPrefs.hiddenVehicles = vehicleDisplayPrefs.hiddenVehicles.filter(v => v !== vehicleName);
+  saveVehicleDisplayPrefs();
+  renderVehicleManagerList();
+  loadReadinessData();
+}
+
 function toggleOtherField() {
   const issueType = document.getElementById('issueType').value;
   const otherField = document.getElementById('otherIssueField');
@@ -884,6 +1069,14 @@ async function submitNewIssue() {
 // Initialize when scripts load
 window.gapiLoaded = gapiLoaded;
 window.gisLoaded = gisLoaded;
+
+window.showVehicleManagerModal = showVehicleManagerModal;
+window.closeVehicleManagerModal = closeVehicleManagerModal;
+window.addVehicleToDisplay = addVehicleToDisplay;
+window.toggleVehicleVisibility = toggleVehicleVisibility;
+window.removeCustomVehicle = removeCustomVehicle;
+
+loadVehicleDisplayPrefs();
 
 // Poll for script availability
 const checkScriptsLoaded = setInterval(() => {
