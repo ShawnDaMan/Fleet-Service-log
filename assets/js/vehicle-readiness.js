@@ -962,6 +962,25 @@ function closeVehicleManagerModal() {
   }
 }
 
+async function setupVehicleRegistryNow() {
+  if (!accessToken) {
+    alert('Please sign in with Google first.');
+    handleSignIn();
+    return;
+  }
+
+  try {
+    await ensureVehicleRegistrySheet();
+    vehicleRegistryRows = await loadVehicleRegistryRows();
+    renderVehicleManagerList();
+    alert('Vehicle Registry tab is ready in Google Sheets.');
+  } catch (error) {
+    console.error('Vehicle Registry setup failed:', error);
+    const details = error?.result?.error?.message || error?.message || 'Unknown error';
+    alert(`Could not create Vehicle Registry tab. ${details}`);
+  }
+}
+
 function renderVehicleManagerList() {
   const listEl = document.getElementById('vehicleManagerList');
   if (!listEl) return;
@@ -1197,6 +1216,7 @@ window.gisLoaded = gisLoaded;
 
 window.showVehicleManagerModal = showVehicleManagerModal;
 window.closeVehicleManagerModal = closeVehicleManagerModal;
+window.setupVehicleRegistryNow = setupVehicleRegistryNow;
 window.addVehicleToDisplay = addVehicleToDisplay;
 
 // Poll for script availability
