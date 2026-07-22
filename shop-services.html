@@ -3,48 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shop Services – Classic Car Specialists</title>
+    <title>Shop Services - Fleet Service Log</title>
+    <link rel="icon" type="image/jpeg" href="favicon.jpg">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <style>
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            background: #f7f7f7;
+            font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
+            background: #f7f9fa url('assets/images/brays-webpage-snapshot.png') no-repeat center center fixed;
+            background-size: cover;
             color: #222;
             margin: 0;
             padding: 0;
+            position: relative;
+            min-height: 100vh;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.3);
+            z-index: 0;
+            pointer-events: none;
         }
         .container {
-            max-width: 800px;
+            position: relative;
+            z-index: 1;
+            max-width: 1000px;
             margin: 40px auto;
             background: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-            border-radius: 8px;
-            padding: 32px 24px;
+            box-shadow: 0 2px 12px rgba(44,62,80,0.08);
+            border-radius: 12px;
+            padding: 32px 24px 40px;
         }
         h1 {
-            color: #2c3e50;
-            margin-bottom: 0.5em;
+            text-align: center;
+            color: #222;
+            font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow:
+              2px 2px 4px rgba(0,0,0,0.2),
+             -1px -1px 0 #fff,
+              1px -1px 0 #fff,
+             -1px  1px 0 #fff,
+              1px  1px 0 #fff;
+            font-weight: 900;
         }
         h2 {
-            color: #444;
+            color: #2980b9;
             margin-top: 2em;
+            font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+            font-weight: 600;
+            text-align: center;
         }
         ul {
             padding-left: 1.2em;
         }
+        .performance-title {
+            color: #222;
+            letter-spacing: 0;
+            text-shadow:
+              2px 2px 4px rgba(0,0,0,0.2),
+             -1px -1px 0 #fff,
+              1px -1px 0 #fff,
+             -1px  1px 0 #fff,
+              1px  1px 0 #fff;
+        }
+        .intro {
+            text-align: center;
+            font-size: 1.08rem;
+            color: #34495e;
+            background: #f7f9fa;
+            padding: 18px 24px;
+            border-radius: 10px;
+            margin: 18px auto 36px;
+            box-shadow: 0 2px 12px rgba(44,62,80,0.08);
+            border-left: 4px solid #2980b9;
+        }
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            margin: 36px 0;
+        }
+        .service-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(44,62,80,0.08);
+            padding: 24px 18px 18px;
+            text-align: center;
+            color: #2c3e50;
+            border: 1px solid #e1e7ed;
+            transition: transform 0.18s, box-shadow 0.18s;
+        }
+        .service-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 16px rgba(44,62,80,0.12);
+        }
+        .service-card h2 {
+            color: #2c3e50;
+            font-size: 1.3rem;
+            margin: 0.7em 0 0.4em;
+        }
+        .service-card p {
+            color: #34495e;
+            font-size: 1rem;
+        }
+        .service-img {
+            width: 100%;
+            max-width: 220px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 18px;
+            background: #dfe6ec;
+            border: 1px solid #d6dee5;
+            box-shadow: 0 2px 8px rgba(44,62,80,0.1);
+        }
+        .cta-section {
+            margin-top: 48px;
+            text-align: center;
+        }
+        .cta-section p {
+            color: #34495e;
+            font-size: 1.05rem;
+            margin-bottom: 1.2em;
+        }
         .contact {
             margin-top: 2em;
-            padding: 1em;
-            background: #f0f0f0;
+            padding: 16px 20px;
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
             border-radius: 6px;
+            color: #2c3e50;
+            text-align: left;
+        }
+        .nav-links {
+            text-align: center;
+            margin: 20px auto 28px;
+        }
+        .nav-links a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background: #2980b9;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .nav-links a:hover {
+            background: #1a5a8a;
         }
         @media (max-width: 600px) {
-            .container { padding: 16px 6px; }
+            .container { padding: 18px 12px 28px; margin: 24px auto; }
+            .nav-links a { display: block; margin: 8px 0; }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="nav-links">
+            <a href="index.html">&larr; Service Log</a>
+        </div>
         <h1 class="performance-title">Performance Shop Services</h1>
         <p class="intro">Unleash your car’s true potential. We specialize in high-performance tuning, dyno testing, and custom builds for automotive enthusiasts. Whether you’re chasing horsepower or building your dream machine, our team delivers results that turn heads and win races.</p>
 
