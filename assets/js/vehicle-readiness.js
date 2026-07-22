@@ -55,6 +55,10 @@ function isVehicleActive(activeValue) {
   return value === '' || value === 'yes' || value === 'y' || value === 'true' || value === '1';
 }
 
+function vehicleRegistryRange(a1Range) {
+  return `'${VEHICLE_REGISTRY_SHEET}'!${a1Range}`;
+}
+
 async function ensureVehicleRegistrySheet() {
   const metadataResponse = await gapi.client.sheets.spreadsheets.get({
     spreadsheetId: READINESS_CONFIG.spreadsheetId,
@@ -81,7 +85,7 @@ async function ensureVehicleRegistrySheet() {
 
   const headerResponse = await gapi.client.sheets.spreadsheets.values.get({
     spreadsheetId: READINESS_CONFIG.spreadsheetId,
-    range: `${VEHICLE_REGISTRY_SHEET}!A1:G1`
+    range: vehicleRegistryRange('A1:G1')
   });
 
   const headerRow = (headerResponse.result.values && headerResponse.result.values[0]) || [];
@@ -90,7 +94,7 @@ async function ensureVehicleRegistrySheet() {
   if (!headersMatch) {
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: READINESS_CONFIG.spreadsheetId,
-      range: `${VEHICLE_REGISTRY_SHEET}!A1:G1`,
+      range: vehicleRegistryRange('A1:G1'),
       valueInputOption: 'USER_ENTERED',
       resource: { values: [VEHICLE_REGISTRY_HEADERS] }
     });
@@ -102,7 +106,7 @@ async function loadVehicleRegistryRows() {
 
   const response = await gapi.client.sheets.spreadsheets.values.get({
     spreadsheetId: READINESS_CONFIG.spreadsheetId,
-    range: `${VEHICLE_REGISTRY_SHEET}!A2:G`
+    range: vehicleRegistryRange('A2:G')
   });
 
   const rows = response.result.values || [];
@@ -147,7 +151,7 @@ async function seedVehicleRegistry(discoveredVehicleNames) {
 
   await gapi.client.sheets.spreadsheets.values.append({
     spreadsheetId: READINESS_CONFIG.spreadsheetId,
-    range: `${VEHICLE_REGISTRY_SHEET}!A:G`,
+    range: vehicleRegistryRange('A:G'),
     valueInputOption: 'USER_ENTERED',
     resource: { values }
   });
@@ -292,6 +296,7 @@ async function loadReadinessData() {
     });
 
     const rows = response.result.values || [];
+    vehicleRegistryRows = await loadVehicleRegistryRows();
     
     if (rows.length === 0) {
       document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #7f8c8d;">No data found.</p>';
@@ -300,7 +305,7 @@ async function loadReadinessData() {
     
     if (rows.length === 1) {
       document.getElementById('readinessGrid').innerHTML = '<p style="text-align: center; color: #7f8c8d;">No issues reported yet. All vehicles are ready!</p>';
-      updateSummaryCounts(8, 0, 0);
+      updateSummaryCounts(vehicleRegistryRows.length || 8, 0, 0);
       return;
     }
 
@@ -338,8 +343,6 @@ async function loadReadinessData() {
     });
 
     discoveredVehicles = Array.from(discoveredSet).sort();
-    vehicleRegistryRows = await loadVehicleRegistryRows();
-
     if (vehicleRegistryRows.length === 0 && discoveredVehicles.length > 0) {
       await seedVehicleRegistry(discoveredVehicles);
       vehicleRegistryRows = await loadVehicleRegistryRows();
@@ -1043,7 +1046,7 @@ async function addVehicleToDisplay() {
   try {
     await gapi.client.sheets.spreadsheets.values.append({
       spreadsheetId: READINESS_CONFIG.spreadsheetId,
-      range: `${VEHICLE_REGISTRY_SHEET}!A:G`,
+      range: vehicleRegistryRange('A:G'),
       valueInputOption: 'USER_ENTERED',
       resource: {
         values: [[year, make, model, trim, vin, color, 'Yes']]
@@ -1067,7 +1070,7 @@ async function setVehicleRegistryActive(rowIndex, isActive) {
   try {
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: READINESS_CONFIG.spreadsheetId,
-      range: `${VEHICLE_REGISTRY_SHEET}!G${rowIndex}`,
+      range: vehicleRegistryRange(`G${rowIndex}`),
       valueInputOption: 'USER_ENTERED',
       resource: {
         values: [[isActive ? 'Yes' : 'No']]
@@ -1089,7 +1092,7 @@ async function removeVehicleRegistryRow(rowIndex, vehicleTitle) {
   try {
     await gapi.client.sheets.spreadsheets.values.clear({
       spreadsheetId: READINESS_CONFIG.spreadsheetId,
-      range: `${VEHICLE_REGISTRY_SHEET}!A${rowIndex}:G${rowIndex}`
+      range: vehicleRegistryRange(`A${rowIndex}:G${rowIndex}`)
     });
 
     await loadReadinessData();
