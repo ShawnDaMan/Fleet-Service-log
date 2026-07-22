@@ -181,8 +181,6 @@
     <button id="readinessSignInBtn" style="background: #2980b9; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: 10px;" onclick="handleSignIn()">Sign In with Google</button>
     <button id="readinessSignOutBtn" style="background: #db4437; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: 10px; display: none;" onclick="handleSignOut()">Sign Out</button>
     <button id="addIssueBtn" style="background: #e74c3c; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: 10px;" onclick="showAddIssueModal()">+ Report Issue</button>
-    <button id="setupRegistryBtn" style="background: #8e44ad; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: 10px;" onclick="setupVehicleRegistryNow()">Setup Vehicle Registry</button>
-    <button id="manageVehiclesBtn" style="background: #16a085; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: 10px;" onclick="showVehicleManagerModal()">Manage Vehicles</button>
   </div>
 
   <!-- Add Issue Modal -->
@@ -374,6 +372,11 @@
         <button onclick="nextPage()" id="nextBtn" style="padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" disabled>Next</button>
       </div>
     </div>
+  </div>
+
+  <div style="text-align: center; margin: 24px auto 40px; max-width: 95%;">
+    <button id="setupRegistryBtn" style="background: #8e44ad; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin: 0 6px;" onclick="setupVehicleRegistryNow()">Setup Vehicle Registry</button>
+    <button id="manageVehiclesBtn" style="background: #16a085; border: none; color: white; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin: 0 6px;" onclick="showVehicleManagerModal()">Manage Vehicles</button>
   </div>
 
   <script src="assets/js/vehicle-readiness.js?v=20260722b"></script>
