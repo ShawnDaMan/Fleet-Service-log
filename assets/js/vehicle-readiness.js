@@ -20,6 +20,7 @@ let currentPage = 1;
 let rowsPerPage = 50;
 let allIssuesData = [];
 let discoveredVehicles = [];
+const readinessDebugMode = new URLSearchParams(window.location.search).get('debugReadiness') === '1';
 
 const VEHICLE_REGISTRY_SHEET = 'Vehicle Registry';
 const VEHICLE_REGISTRY_HEADERS = ['Year', 'Make', 'Model', 'Trim', 'VIN', 'Color', 'Active'];
@@ -42,6 +43,14 @@ function parseVehicleName(vehicleName) {
 
 function buildVehicleKey(make, model) {
   return normalizeVehicleName(`${make || ''} ${model || ''}`);
+}
+
+function buildVehicleLookupKey(make, model) {
+  return buildVehicleKey(make, model).toLowerCase();
+}
+
+function normalizeVehicleLookupName(name) {
+  return normalizeVehicleName(name).toLowerCase();
 }
 
 function buildVehicleTitle(vehicleRow) {
@@ -316,8 +325,9 @@ async function loadReadinessData() {
       const vehicleMake = (row[1] || '').trim();
       const vehicleModel = (row[2] || '').trim();
       const vehicleName = `${vehicleMake} ${vehicleModel}`.trim().replace(/\s+/g, ' ');
+      const vehicleLookupKey = normalizeVehicleLookupName(vehicleName);
       
-      if (!vehicleName) return;
+      if (!vehicleLookupKey) return;
       discoveredSet.add(vehicleName);
       
       const issue = {
@@ -335,11 +345,11 @@ async function loadReadinessData() {
         notedIssues: row[12] || ''
       };
       
-      if (!issuesByVehicle[vehicleName]) {
-        issuesByVehicle[vehicleName] = [];
+      if (!issuesByVehicle[vehicleLookupKey]) {
+        issuesByVehicle[vehicleLookupKey] = [];
       }
       
-      issuesByVehicle[vehicleName].push(issue);
+      issuesByVehicle[vehicleLookupKey].push(issue);
     });
 
     discoveredVehicles = Array.from(discoveredSet).sort();
@@ -388,42 +398,35 @@ function displayReadinessCards(issuesByVehicle) {
   renderVehicleManagerList();
 
   displayVehicles.forEach(vehicleName => {
-    const issues = issuesByVehicle[vehicleName] || [];
+    const vehicleLookupKey = normalizeVehicleLookupName(vehicleName);
+    const issues = issuesByVehicle[vehicleLookupKey] || [];
     const unreviewedIssues = issues.filter(issue => !issue.dateReviewed);
-    const highPriorityUnreviewed = unreviewedIssues.some(issue => (issue.priority || '').toLowerCase() === 'high');
-    const anyUnreviewed = unreviewedIssues.length > 0;
-    const latestStatusOverride = issues
-      .filter(issue => issue.manualStatus)
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
-
+    const highPriorityUnreviewed = unreviewedIssues.some(issue => (issue.priority || '').toLowerCase().includes('high'));
+    const mediumPriorityUnreviewed = unreviewedIssues.some(issue => (issue.priority || '').toLowerCase().includes('medium'));
     // Base readiness is used for summary counts and remains issue-driven.
     let baseStatus = 'ready';
     if (highPriorityUnreviewed) {
       baseStatus = 'not-ready';
       notReadyCount++;
-    } else if (anyUnreviewed) {
+    } else if (mediumPriorityUnreviewed) {
       baseStatus = 'warning';
       warningCount++;
     } else {
       readyCount++;
     }
 
-    // Card display can be manually overridden without changing summary totals.
+    // Card state always follows open issue priority rules.
     let status = baseStatus;
     let statusText = baseStatus === 'not-ready' ? 'Not Ready' : baseStatus === 'warning' ? 'Needs Attention' : 'Ready';
     let cardClass = baseStatus === 'not-ready' ? 'vehicle-card not-ready' : baseStatus === 'warning' ? 'vehicle-card warning' : 'vehicle-card';
 
-    if (latestStatusOverride) {
-      if (latestStatusOverride.manualStatus.toLowerCase().includes('not ready')) {
-        status = 'not-ready';
-        statusText = 'Not Ready (Manual)';
-        cardClass = 'vehicle-card not-ready';
-      } else {
-        status = 'ready';
-        statusText = 'Ready';
-        cardClass = 'vehicle-card';
-      }
-    }
+    const debugInfo = readinessDebugMode ? `
+      <div style="margin: 6px 0 10px; padding: 8px; border-radius: 6px; background: #f4f6f8; border: 1px dashed #95a5a6; font-size: 0.78rem; color: #2c3e50; line-height: 1.35;">
+        key: ${vehicleLookupKey} | issues: ${issues.length} | unreviewed: ${unreviewedIssues.length}<br>
+        high: ${highPriorityUnreviewed} | medium: ${mediumPriorityUnreviewed}<br>
+        base: ${baseStatus} | final: ${status}
+      </div>
+    ` : '';
 
     const card = document.createElement('div');
     card.className = cardClass;
@@ -460,6 +463,7 @@ function displayReadinessCards(issuesByVehicle) {
     card.innerHTML = `
       <div class="vehicle-name">${vehicleName}</div>
       <span class="status-badge status-${status}">${statusText}</span>
+      ${debugInfo}
       ${unreviewedIssues.length > 0 ? `<div style="font-size: 0.9rem; color: #7f8c8d; margin-bottom: 8px;">${unreviewedIssues.length} open issue${unreviewedIssues.length !== 1 ? 's' : ''}</div>` : ''}
       ${issuesHtml}
       ${accessToken ? `
@@ -844,7 +848,7 @@ async function setVehicleStatus(vehicleName, status) {
       const vehicleModel = row[2] || '';
       const rowVehicleName = `${vehicleMake} ${vehicleModel}`.trim();
       
-      if (rowVehicleName === vehicleName) {
+      if (normalizeVehicleLookupName(rowVehicleName) === normalizeVehicleLookupName(vehicleName)) {
         targetRowIndex = i + 1; // +1 for 1-based indexing
         break;
       }
