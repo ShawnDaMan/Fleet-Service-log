@@ -4,7 +4,7 @@ const GOOGLE_SHEETS_SYNC_CONFIG = {
   apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
   clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com',
   spreadsheetId: '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk',
-  targetSheetGid: 2101308899,
+  targetSheetTitle: 'Inspection Records',
   discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
   scope: 'https://www.googleapis.com/auth/spreadsheets'
 };
@@ -367,6 +367,7 @@ const els = {
   failedReports: document.getElementById('failedReports'),
   resetFormBtn: document.getElementById('resetFormBtn'),
   printCurrentBtn: document.getElementById('printCurrentBtn'),
+  createSheetTabBtn: document.getElementById('createSheetTabBtn'),
   exportJsonBtn: document.getElementById('exportJsonBtn'),
   importJsonInput: document.getElementById('importJsonInput'),
   clearAllBtn: document.getElementById('clearAllBtn')
@@ -667,13 +668,39 @@ async function getTargetSheetTitle() {
   });
 
   const sheets = response.result?.sheets || [];
-  const target = sheets.find(s => Number(s?.properties?.sheetId) === GOOGLE_SHEETS_SYNC_CONFIG.targetSheetGid);
-  if (!target) {
-    throw new Error(`Target worksheet with gid ${GOOGLE_SHEETS_SYNC_CONFIG.targetSheetGid} was not found.`);
+  const target = sheets.find(s => (s?.properties?.title || '').trim() === GOOGLE_SHEETS_SYNC_CONFIG.targetSheetTitle);
+
+  if (target) {
+    targetSheetTitleCache = target.properties.title;
+    return targetSheetTitleCache;
   }
 
-  targetSheetTitleCache = target.properties.title;
+  await gapi.client.sheets.spreadsheets.batchUpdate({
+    spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+    resource: {
+      requests: [
+        {
+          addSheet: {
+            properties: {
+              title: GOOGLE_SHEETS_SYNC_CONFIG.targetSheetTitle,
+              gridProperties: {
+                frozenRowCount: 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  });
+
+  targetSheetTitleCache = GOOGLE_SHEETS_SYNC_CONFIG.targetSheetTitle;
   return targetSheetTitleCache;
+}
+
+async function createOrVerifySpreadsheetTab() {
+  const sheetTitle = await getTargetSheetTitle();
+  await ensureSpreadsheetHeader(sheetTitle);
+  return sheetTitle;
 }
 
 async function ensureSpreadsheetHeader(sheetTitle) {
@@ -702,8 +729,7 @@ async function ensureSpreadsheetHeader(sheetTitle) {
 
 async function appendRecordToSpreadsheet(record) {
   await ensureAccessToken();
-  const sheetTitle = await getTargetSheetTitle();
-  await ensureSpreadsheetHeader(sheetTitle);
+  const sheetTitle = await createOrVerifySpreadsheetTab();
 
   await gapi.client.sheets.spreadsheets.values.append({
     spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
@@ -1901,6 +1927,18 @@ function wireEvents() {
   els.scoringProfile.addEventListener('change', renderScorecardFromForm);
   els.autoStatusToggle.addEventListener('change', renderScorecardFromForm);
   els.overallStatus.addEventListener('change', renderScorecardFromForm);
+
+  if (els.createSheetTabBtn) {
+    els.createSheetTabBtn.addEventListener('click', async () => {
+      try {
+        const sheetTitle = await createOrVerifySpreadsheetTab();
+        alert(`Spreadsheet tab ready: ${sheetTitle}. New inspections will append as new rows in this single tab.`);
+      } catch (error) {
+        console.error('Create/verify spreadsheet tab failed:', error);
+        alert('Could not create/verify spreadsheet tab. Please sign in with Google and try again.');
+      }
+    });
+  }
 
   els.exportJsonBtn.addEventListener('click', exportJson);
   els.importJsonInput.addEventListener('change', e => importJsonFile(e.target.files[0]));
