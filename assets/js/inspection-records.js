@@ -1,5 +1,19 @@
 const STORAGE_KEY = 'fleet_inspection_records_v2';
 
+const GOOGLE_SHEETS_SYNC_CONFIG = {
+  apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
+  clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com',
+  spreadsheetId: '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk',
+  targetSheetGid: 2101308899,
+  discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+  scope: 'https://www.googleapis.com/auth/spreadsheets'
+};
+
+let googleClientReady = false;
+let tokenClient = null;
+let accessToken = null;
+let targetSheetTitleCache = '';
+
 const CHECKPOINT_STATUS_OPTIONS = [
   'Pass',
   'Needs Attention',
@@ -453,6 +467,253 @@ function readRecords() {
 
 function saveRecords() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+function getSpreadsheetHeaders() {
+  return [
+    'Record ID',
+    'Saved At',
+    'Inspection Date',
+    'Vehicle',
+    'VIN',
+    'Stock Number',
+    'Inspector',
+    'Overall Status',
+    'Suggested Status',
+    'Scoring Profile',
+    'Weighted Quality %',
+    'Quality Tier',
+    'Numbers Matching Result',
+    'Numbers Matching Verification',
+    'Year',
+    'Make',
+    'Model',
+    'Trim',
+    'Current Paint',
+    'Original Paint',
+    'Paint Originality',
+    'Current Interior',
+    'Original Interior',
+    'Interior Originality',
+    'Current Engine',
+    'Original Engine',
+    'Engine Originality',
+    'Current Transmission',
+    'Original Transmission',
+    'Transmission Originality',
+    'Observed Block Stamp/Casting #',
+    'Original Block Stamp/Casting #',
+    'Observed Heads Stamp/Casting #',
+    'Original Heads Stamp/Casting #',
+    'Observed Transmission Stamp/Casting #',
+    'Original Transmission Stamp/Casting #',
+    'Drivetrain',
+    'Mileage',
+    'Inspection Location',
+    'Weather',
+    'Title Status',
+    'Seller Name',
+    'Seller Contact',
+    'Road Test Driven By',
+    'Road Test Miles',
+    'Docs Available',
+    'Immediate Safety Concern',
+    'Repair Estimate',
+    'Next Service Date',
+    'Summary Notes',
+    'Photo Links'
+  ];
+}
+
+function toSpreadsheetRow(record) {
+  const d = record.details || {};
+  const s = record.scoreSnapshot || {};
+
+  return [
+    record.id || '',
+    record.updatedAt || new Date().toISOString(),
+    record.inspectionDate || '',
+    record.vehicle || '',
+    record.vin || '',
+    record.stockNumber || '',
+    record.inspector || '',
+    record.overallStatus || '',
+    s.suggestedStatus || '',
+    s.profileLabel || '',
+    Math.round(Number(s.weightedQualityPct || 0)),
+    s.qualityTier || '',
+    d.numbersMatchingResult || s.numbersMatchingResult || '',
+    d.numbersMatchClaim || '',
+    d.year || '',
+    d.make || '',
+    d.model || '',
+    d.trim || '',
+    d.paintColor || '',
+    d.originalPaintColor || '',
+    d.paintOriginality || '',
+    d.interiorColor || '',
+    d.originalInteriorColor || '',
+    d.interiorOriginality || '',
+    d.engineType || '',
+    d.originalEngineType || '',
+    d.engineOriginality || '',
+    d.transmissionType || '',
+    d.originalTransmissionType || '',
+    d.transmissionOriginality || '',
+    d.blockStampNumber || '',
+    d.originalBlockStampNumber || '',
+    d.headsStampNumber || '',
+    d.originalHeadsStampNumber || '',
+    d.transStampNumber || '',
+    d.originalTransStampNumber || '',
+    d.drivetrain || '',
+    record.mileage || '',
+    d.inspectionLocation || '',
+    d.weather || '',
+    d.titleStatus || '',
+    d.sellerName || '',
+    d.sellerContact || '',
+    d.drivenBy || '',
+    d.testMiles || '',
+    d.docsAvailable || '',
+    d.immediateSafety || '',
+    d.repairEstimate || '',
+    d.nextServiceDate || '',
+    record.summaryNotes || '',
+    (record.photoLinks || []).join(' | ')
+  ];
+}
+
+async function initGoogleClientIfNeeded() {
+  if (googleClientReady) return;
+
+  if (typeof gapi === 'undefined' || typeof google === 'undefined' || !google.accounts?.oauth2) {
+    throw new Error('Google API scripts are not loaded on this page.');
+  }
+
+  await new Promise((resolve, reject) => {
+    gapi.load('client', async () => {
+      try {
+        await gapi.client.init({
+          apiKey: GOOGLE_SHEETS_SYNC_CONFIG.apiKey,
+          discoveryDocs: GOOGLE_SHEETS_SYNC_CONFIG.discoveryDocs
+        });
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_SHEETS_SYNC_CONFIG.clientId,
+    scope: GOOGLE_SHEETS_SYNC_CONFIG.scope,
+    callback: () => {}
+  });
+
+  const storedToken = localStorage.getItem('google_access_token');
+  const tokenExpiry = Number(localStorage.getItem('google_token_expiry') || 0);
+  if (storedToken && tokenExpiry && Date.now() < tokenExpiry) {
+    accessToken = storedToken;
+    gapi.client.setToken({ access_token: accessToken });
+  }
+
+  googleClientReady = true;
+}
+
+async function ensureAccessToken() {
+  await initGoogleClientIfNeeded();
+
+  if (accessToken) return accessToken;
+
+  if (!tokenClient) {
+    throw new Error('Google token client is not initialized.');
+  }
+
+  accessToken = await new Promise((resolve, reject) => {
+    tokenClient.callback = response => {
+      if (response?.error) {
+        reject(new Error(response.error));
+        return;
+      }
+      if (!response?.access_token) {
+        reject(new Error('No access token returned by Google.'));
+        return;
+      }
+
+      const token = response.access_token;
+      resolve(token);
+    };
+
+    tokenClient.requestAccessToken({ prompt: 'consent' });
+  });
+
+  const expiryTime = Date.now() + (8 * 3600 * 1000);
+  localStorage.setItem('google_access_token', accessToken);
+  localStorage.setItem('google_token_expiry', String(expiryTime));
+  gapi.client.setToken({ access_token: accessToken });
+
+  return accessToken;
+}
+
+async function getTargetSheetTitle() {
+  if (targetSheetTitleCache) return targetSheetTitleCache;
+
+  await ensureAccessToken();
+
+  const response = await gapi.client.sheets.spreadsheets.get({
+    spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+    fields: 'sheets(properties(sheetId,title))'
+  });
+
+  const sheets = response.result?.sheets || [];
+  const target = sheets.find(s => Number(s?.properties?.sheetId) === GOOGLE_SHEETS_SYNC_CONFIG.targetSheetGid);
+  if (!target) {
+    throw new Error(`Target worksheet with gid ${GOOGLE_SHEETS_SYNC_CONFIG.targetSheetGid} was not found.`);
+  }
+
+  targetSheetTitleCache = target.properties.title;
+  return targetSheetTitleCache;
+}
+
+async function ensureSpreadsheetHeader(sheetTitle) {
+  const headerRange = `${sheetTitle}!1:1`;
+  const existing = await gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+    range: headerRange
+  });
+
+  const existingHeader = existing.result?.values?.[0] || [];
+  const expectedHeader = getSpreadsheetHeaders();
+
+  if (existingHeader.length === expectedHeader.length && expectedHeader.every((h, i) => h === (existingHeader[i] || ''))) {
+    return;
+  }
+
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+    range: `${sheetTitle}!A1`,
+    valueInputOption: 'RAW',
+    resource: {
+      values: [expectedHeader]
+    }
+  });
+}
+
+async function appendRecordToSpreadsheet(record) {
+  await ensureAccessToken();
+  const sheetTitle = await getTargetSheetTitle();
+  await ensureSpreadsheetHeader(sheetTitle);
+
+  await gapi.client.sheets.spreadsheets.values.append({
+    spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+    range: `${sheetTitle}!A:AZ`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    resource: {
+      values: [toSpreadsheetRow(record)]
+    }
+  });
 }
 
 function getActiveProfileKey() {
@@ -1569,6 +1830,7 @@ function handleSubmit(event) {
   renderScorecardFromForm();
   const record = buildRecordFromForm();
   const existingIndex = records.findIndex(r => r.id === record.id);
+  const isNewRecord = existingIndex < 0;
 
   if (existingIndex >= 0) {
     records[existingIndex] = record;
@@ -1581,7 +1843,25 @@ function handleSubmit(event) {
 
   saveRecords();
   renderTable();
-  alert('Record saved. Your form data is still here.');
+
+  if (isNewRecord) {
+    appendRecordToSpreadsheet(record)
+      .then(() => {
+        const rowIndex = records.findIndex(r => r.id === record.id);
+        if (rowIndex >= 0) {
+          records[rowIndex].sheetSyncedAt = new Date().toISOString();
+          saveRecords();
+        }
+        alert('Record saved and appended to your Google Sheet tab as a new row.');
+      })
+      .catch(error => {
+        console.error('Spreadsheet append failed:', error);
+        alert('Record saved locally, but Google Sheet append failed. Sign in when prompted and try Save again for this inspection.');
+      });
+    return;
+  }
+
+  alert('Record updated. Existing spreadsheet rows are not overwritten.');
 }
 
 function wireEvents() {

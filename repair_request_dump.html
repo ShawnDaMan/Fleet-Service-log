@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Repair Request Spreadsheet</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
   <link rel="icon" type="image/jpeg" href="favicon.jpg">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <style>
@@ -99,6 +101,7 @@
     }
 
     .btn-open { background: #0f766e; }
+    .btn-create-tab { background: #7c3aed; }
     .btn-inspect-tab { background: #2563eb; }
 
     .tiny { color: var(--muted); font-size: 0.86rem; }
@@ -144,8 +147,10 @@
           target="_blank"
           rel="noopener"
         >Open Sheet in New Browser Tab</a>
+        <button id="createTabBtn" class="btn btn-create-tab" type="button">Create Inspection Dump Sheet Tab</button>
         <a class="btn btn-inspect-tab" href="inspection_reports.html">Back to Inspection Records</a>
       </div>
+      <div id="tabStatus" class="tiny" style="margin-bottom:8px;"></div>
       <div class="tiny" style="margin-bottom:8px;">If the embedded view is blocked by Google permissions, use the open button above.</div>
       <div class="scroll-wrap">
         <iframe
@@ -157,5 +162,116 @@
       <div class="tiny" style="margin-top:10px;">Spreadsheet: 1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk (gid 2101308899)</div>
     </section>
   </div>
+
+  <script>
+    const SHEET_CONFIG = {
+      apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
+      clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com',
+      spreadsheetId: '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk',
+      discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+      scope: 'https://www.googleapis.com/auth/spreadsheets'
+    };
+
+    const TARGET_TAB_NAME = 'Inspection Dump';
+    let tokenClient = null;
+
+    function setStatus(message, isError) {
+      const el = document.getElementById('tabStatus');
+      if (!el) return;
+      el.textContent = message || '';
+      el.style.color = isError ? '#b91c1c' : '#475569';
+    }
+
+    function openSheetByGid(gid) {
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_CONFIG.spreadsheetId}/edit?gid=${gid}#gid=${gid}`;
+      window.open(url, '_blank', 'noopener');
+    }
+
+    async function initClients() {
+      if (typeof gapi === 'undefined' || typeof google === 'undefined') {
+        throw new Error('Google API scripts are not loaded yet. Please retry in a few seconds.');
+      }
+
+      await new Promise((resolve, reject) => {
+        gapi.load('client', async () => {
+          try {
+            await gapi.client.init({
+              apiKey: SHEET_CONFIG.apiKey,
+              discoveryDocs: SHEET_CONFIG.discoveryDocs
+            });
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: SHEET_CONFIG.clientId,
+        scope: SHEET_CONFIG.scope,
+        callback: async (tokenResponse) => {
+          if (tokenResponse.error) {
+            setStatus('Google sign-in failed while creating spreadsheet tab.', true);
+            return;
+          }
+          gapi.client.setToken({ access_token: tokenResponse.access_token });
+          await ensureInspectionDumpTab();
+        }
+      });
+    }
+
+    async function ensureInspectionDumpTab() {
+      setStatus('Checking spreadsheet tabs...');
+      const meta = await gapi.client.sheets.spreadsheets.get({
+        spreadsheetId: SHEET_CONFIG.spreadsheetId,
+        fields: 'sheets(properties(sheetId,title))'
+      });
+
+      const sheets = meta.result.sheets || [];
+      const existing = sheets.find(s => (s.properties?.title || '').trim().toLowerCase() === TARGET_TAB_NAME.toLowerCase());
+      if (existing) {
+        setStatus(`Sheet tab already exists: ${TARGET_TAB_NAME}. Opening it now.`);
+        openSheetByGid(existing.properties.sheetId);
+        return;
+      }
+
+      setStatus('Creating new spreadsheet tab...');
+      const created = await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_CONFIG.spreadsheetId,
+        resource: {
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: TARGET_TAB_NAME
+                }
+              }
+            }
+          ]
+        }
+      });
+
+      const newSheetId = created.result.replies?.[0]?.addSheet?.properties?.sheetId;
+      setStatus(`Created sheet tab: ${TARGET_TAB_NAME}.`);
+      if (newSheetId !== undefined) {
+        openSheetByGid(newSheetId);
+      }
+    }
+
+    async function handleCreateTabClick() {
+      try {
+        setStatus('Preparing Google Sheets access...');
+        if (!tokenClient) {
+          await initClients();
+        }
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+      } catch (error) {
+        console.error(error);
+        setStatus(`Could not create spreadsheet tab: ${error.message || error}`, true);
+      }
+    }
+
+    document.getElementById('createTabBtn').addEventListener('click', handleCreateTabClick);
+  </script>
 </body>
 </html>
