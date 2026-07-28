@@ -516,6 +516,7 @@
       <a class="btn-home" href="index.html">Service Log</a>
       <a class="btn-readiness" href="vehicle_readiness.html">Vehicle Readiness</a>
       <a class="btn-charts" href="fleet_service_charts.html">Charts</a>
+      <a class="btn-charts" href="repair_request_dump.html">Repair Request Dump</a>
     </div>
 
     <section class="hero">
@@ -600,16 +601,106 @@
             <input id="paintColor" placeholder="Blue / White Stripes">
           </div>
           <div class="field">
+            <label for="originalPaintColor">Original Paint Color</label>
+            <input id="originalPaintColor" placeholder="Factory color if known">
+          </div>
+          <div class="field">
+            <label for="paintOriginality">Paint Originality</label>
+            <select id="paintOriginality">
+              <option value="">Select</option>
+              <option>Original</option>
+              <option>Not Original</option>
+              <option>Partially Original</option>
+              <option>Unknown</option>
+            </select>
+          </div>
+          <div class="field">
             <label for="interiorColor">Interior Color</label>
             <input id="interiorColor" placeholder="Black">
           </div>
           <div class="field">
-            <label for="engineType">Engine</label>
+            <label for="originalInteriorColor">Original Interior Color</label>
+            <input id="originalInteriorColor" placeholder="Factory interior color if known">
+          </div>
+          <div class="field">
+            <label for="interiorOriginality">Interior Originality</label>
+            <select id="interiorOriginality">
+              <option value="">Select</option>
+              <option>Original</option>
+              <option>Not Original</option>
+              <option>Partially Original</option>
+              <option>Unknown</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="engineType">Current Engine</label>
             <input id="engineType" placeholder="Chevrolet 350 / 383 V8">
           </div>
           <div class="field">
-            <label for="transmissionType">Transmission</label>
+            <label for="originalEngineType">Original Engine</label>
+            <input id="originalEngineType" placeholder="Factory engine spec/code">
+          </div>
+          <div class="field">
+            <label for="engineOriginality">Engine Originality</label>
+            <select id="engineOriginality">
+              <option value="">Select</option>
+              <option>Original</option>
+              <option>Not Original</option>
+              <option>Partially Original</option>
+              <option>Unknown</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="transmissionType">Current Transmission</label>
             <input id="transmissionType" placeholder="Automatic / Manual">
+          </div>
+          <div class="field">
+            <label for="originalTransmissionType">Original Transmission</label>
+            <input id="originalTransmissionType" placeholder="Factory transmission spec/code">
+          </div>
+          <div class="field">
+            <label for="transmissionOriginality">Transmission Originality</label>
+            <select id="transmissionOriginality">
+              <option value="">Select</option>
+              <option>Original</option>
+              <option>Not Original</option>
+              <option>Partially Original</option>
+              <option>Unknown</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="numbersMatchClaim">Numbers Matching Verification</label>
+            <select id="numbersMatchClaim">
+              <option value="">Select</option>
+              <option>Yes - Numbers Matching</option>
+              <option>Partial Match</option>
+              <option>No - Not Numbers Matching</option>
+              <option>Unable to Verify</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="blockStampNumber">Observed Block Stamp/Casting #</label>
+            <input id="blockStampNumber" placeholder="Observed engine block number/casting">
+          </div>
+          <div class="field">
+            <label for="originalBlockStampNumber">Original Block Stamp/Casting #</label>
+            <input id="originalBlockStampNumber" placeholder="Factory-correct block number/casting">
+          </div>
+          <div class="field">
+            <label for="headsStampNumber">Observed Heads Stamp/Casting #</label>
+            <input id="headsStampNumber" placeholder="Observed cylinder head numbers/codes">
+          </div>
+          <div class="field">
+            <label for="originalHeadsStampNumber">Original Heads Stamp/Casting #</label>
+            <input id="originalHeadsStampNumber" placeholder="Factory-correct head numbers/codes">
+          </div>
+          <div class="field">
+            <label for="transStampNumber">Observed Transmission Stamp/Casting #</label>
+            <input id="transStampNumber" placeholder="Observed transmission ID/casting code">
+          </div>
+          <div class="field">
+            <label for="originalTransStampNumber">Original Transmission Stamp/Casting #</label>
+            <input id="originalTransStampNumber" placeholder="Factory-correct transmission ID/casting">
           </div>
           <div class="field">
             <label for="drivetrain">Drivetrain</label>
@@ -691,6 +782,7 @@
         <div class="scorecard-wrap">
           <div class="suggest-row">
             <div><strong>Suggested Overall Status:</strong> <span id="suggestedStatusBadge" class="suggested-badge suggested-attn">Needs Attention</span></div>
+            <div><strong>Numbers Matching Result:</strong> <span id="numbersMatchingResult" class="suggested-badge suggested-attn">Unknown</span></div>
             <label style="display:flex; align-items:center; gap:6px; margin:0; font-size:0.86rem; font-weight:700; color:#0f172a;">
               <input id="autoStatusToggle" type="checkbox" checked style="width:auto;">
               Auto-apply suggestion
@@ -775,9 +867,9 @@
       </div>
 
       <div class="actions" style="margin-top:0; margin-bottom:8px;">
-        <button class="export" type="button" id="exportJsonBtn">Export Records (JSON)</button>
-        <label class="file-btn export" for="importJsonInput">Import Records (JSON)</label>
-        <input class="file-input" id="importJsonInput" type="file" accept="application/json,.json">
+        <button class="export" type="button" id="exportJsonBtn">Export Records (Spreadsheet CSV)</button>
+        <label class="file-btn export" for="importJsonInput">Import Records (Spreadsheet CSV)</label>
+        <input class="file-input" id="importJsonInput" type="file" accept="text/csv,.csv">
         <button class="delete" type="button" id="clearAllBtn">Delete All Records</button>
       </div>
 
@@ -798,7 +890,7 @@
           </tbody>
         </table>
       </div>
-      <div class="tiny" style="margin-top:8px;">Records are saved in this browser on this device.</div>
+      <div class="tiny" style="margin-top:8px;">Records are saved in this browser on this device. Use Spreadsheet CSV export to keep a local file on your PC.</div>
     </section>
   </div>
 

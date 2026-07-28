@@ -294,9 +294,24 @@ const els = {
   model: document.getElementById('model'),
   trim: document.getElementById('trim'),
   paintColor: document.getElementById('paintColor'),
+  originalPaintColor: document.getElementById('originalPaintColor'),
+  paintOriginality: document.getElementById('paintOriginality'),
   interiorColor: document.getElementById('interiorColor'),
+  originalInteriorColor: document.getElementById('originalInteriorColor'),
+  interiorOriginality: document.getElementById('interiorOriginality'),
   engineType: document.getElementById('engineType'),
+  originalEngineType: document.getElementById('originalEngineType'),
+  engineOriginality: document.getElementById('engineOriginality'),
   transmissionType: document.getElementById('transmissionType'),
+  originalTransmissionType: document.getElementById('originalTransmissionType'),
+  transmissionOriginality: document.getElementById('transmissionOriginality'),
+  numbersMatchClaim: document.getElementById('numbersMatchClaim'),
+  blockStampNumber: document.getElementById('blockStampNumber'),
+  originalBlockStampNumber: document.getElementById('originalBlockStampNumber'),
+  headsStampNumber: document.getElementById('headsStampNumber'),
+  originalHeadsStampNumber: document.getElementById('originalHeadsStampNumber'),
+  transStampNumber: document.getElementById('transStampNumber'),
+  originalTransStampNumber: document.getElementById('originalTransStampNumber'),
   drivetrain: document.getElementById('drivetrain'),
   inspectionLocation: document.getElementById('inspectionLocation'),
   weather: document.getElementById('weather'),
@@ -313,6 +328,7 @@ const els = {
   photoLinks: document.getElementById('photoLinks'),
   checkpointsContainer: document.getElementById('checkpointsContainer'),
   suggestedStatusBadge: document.getElementById('suggestedStatusBadge'),
+  numbersMatchingResult: document.getElementById('numbersMatchingResult'),
   autoStatusToggle: document.getElementById('autoStatusToggle'),
   statusRuleText: document.getElementById('statusRuleText'),
   statusMismatchNote: document.getElementById('statusMismatchNote'),
@@ -381,6 +397,38 @@ function statusClass(status) {
   if (status === 'Pass') return 'status-pass';
   if (status === 'Needs Attention') return 'status-attn';
   return 'status-fail';
+}
+
+function normalizeMatchingValue(value) {
+  const v = (value || '').toString().trim().toLowerCase();
+  if (!v) return '';
+  if (v.includes('yes') || v === 'original') return 'Yes';
+  if (v.includes('partial')) return 'Partial';
+  if (v.includes('not original') || v.includes('no')) return 'No';
+  return '';
+}
+
+function deriveNumbersMatchingResult() {
+  const explicit = normalizeMatchingValue(els.numbersMatchClaim?.value || '');
+  if (explicit) return explicit;
+
+  const values = [
+    normalizeMatchingValue(els.engineOriginality?.value || ''),
+    normalizeMatchingValue(els.transmissionOriginality?.value || ''),
+    normalizeMatchingValue(els.paintOriginality?.value || ''),
+    normalizeMatchingValue(els.interiorOriginality?.value || '')
+  ].filter(Boolean);
+
+  if (!values.length) return 'Unknown';
+  if (values.every(v => v === 'Yes')) return 'Yes';
+  if (values.some(v => v === 'No')) return 'No';
+  return 'Partial';
+}
+
+function matchingResultClass(result) {
+  if (result === 'Yes') return 'suggested-pass';
+  if (result === 'No') return 'suggested-fail';
+  return 'suggested-attn';
 }
 
 function checkpointStatusId(sectionKey, itemKey) {
@@ -657,6 +705,11 @@ function renderScorecardFromForm() {
 
   els.suggestedStatusBadge.textContent = suggested.status;
   els.suggestedStatusBadge.className = `suggested-badge ${suggestedClass(suggested.status)}`;
+  const matchingResult = deriveNumbersMatchingResult();
+  if (els.numbersMatchingResult) {
+    els.numbersMatchingResult.textContent = matchingResult;
+    els.numbersMatchingResult.className = `suggested-badge ${matchingResultClass(matchingResult)}`;
+  }
   els.statusRuleText.textContent = `${profileConfig.label}: ${suggested.rule}`;
 
   if (els.autoStatusToggle.checked) {
@@ -673,7 +726,13 @@ function renderScorecardFromForm() {
 
   renderSectionScoreTable(scorecard.sections);
 
-  return { scorecard, suggestedStatus: suggested.status, suggestedRule: suggested.rule, profileKey };
+  return {
+    scorecard,
+    suggestedStatus: suggested.status,
+    suggestedRule: suggested.rule,
+    profileKey,
+    numbersMatchingResult: deriveNumbersMatchingResult()
+  };
 }
 
 function renderCheckpoints() {
@@ -746,6 +805,7 @@ function buildRecordFromForm() {
   const checkpoints = collectCheckpointsFromForm();
   const scorecard = calculateScorecard(checkpoints, profileConfig);
   const suggested = suggestOverallStatus(scorecard, profileConfig);
+  const numbersMatchingResult = deriveNumbersMatchingResult();
 
   return {
     id: els.editingId.value || `insp_${Date.now()}`,
@@ -763,9 +823,25 @@ function buildRecordFromForm() {
       model: els.model.value.trim(),
       trim: els.trim.value.trim(),
       paintColor: els.paintColor.value.trim(),
+      originalPaintColor: els.originalPaintColor.value.trim(),
+      paintOriginality: els.paintOriginality.value,
       interiorColor: els.interiorColor.value.trim(),
+      originalInteriorColor: els.originalInteriorColor.value.trim(),
+      interiorOriginality: els.interiorOriginality.value,
       engineType: els.engineType.value.trim(),
+      originalEngineType: els.originalEngineType.value.trim(),
+      engineOriginality: els.engineOriginality.value,
       transmissionType: els.transmissionType.value.trim(),
+      originalTransmissionType: els.originalTransmissionType.value.trim(),
+      transmissionOriginality: els.transmissionOriginality.value,
+      numbersMatchClaim: els.numbersMatchClaim.value,
+      blockStampNumber: els.blockStampNumber.value.trim(),
+      originalBlockStampNumber: els.originalBlockStampNumber.value.trim(),
+      headsStampNumber: els.headsStampNumber.value.trim(),
+      originalHeadsStampNumber: els.originalHeadsStampNumber.value.trim(),
+      transStampNumber: els.transStampNumber.value.trim(),
+      originalTransStampNumber: els.originalTransStampNumber.value.trim(),
+      numbersMatchingResult,
       drivetrain: els.drivetrain.value.trim(),
       inspectionLocation: els.inspectionLocation.value.trim(),
       weather: els.weather.value.trim(),
@@ -786,6 +862,7 @@ function buildRecordFromForm() {
       profileLabel: profileConfig.label,
       suggestedStatus: suggested.status,
       suggestedRule: suggested.rule,
+      numbersMatchingResult,
       completionPct: scorecard.overall.completionPct,
       qualityPct: scorecard.overall.qualityPct,
       weightedQualityPct: scorecard.overall.weightedQualityPct,
@@ -849,9 +926,24 @@ function fillForm(record) {
   els.model.value = record.details?.model || '';
   els.trim.value = record.details?.trim || '';
   els.paintColor.value = record.details?.paintColor || '';
+  els.originalPaintColor.value = record.details?.originalPaintColor || '';
+  els.paintOriginality.value = record.details?.paintOriginality || '';
   els.interiorColor.value = record.details?.interiorColor || '';
+  els.originalInteriorColor.value = record.details?.originalInteriorColor || '';
+  els.interiorOriginality.value = record.details?.interiorOriginality || '';
   els.engineType.value = record.details?.engineType || '';
+  els.originalEngineType.value = record.details?.originalEngineType || '';
+  els.engineOriginality.value = record.details?.engineOriginality || '';
   els.transmissionType.value = record.details?.transmissionType || '';
+  els.originalTransmissionType.value = record.details?.originalTransmissionType || '';
+  els.transmissionOriginality.value = record.details?.transmissionOriginality || '';
+  els.numbersMatchClaim.value = record.details?.numbersMatchClaim || '';
+  els.blockStampNumber.value = record.details?.blockStampNumber || '';
+  els.originalBlockStampNumber.value = record.details?.originalBlockStampNumber || '';
+  els.headsStampNumber.value = record.details?.headsStampNumber || '';
+  els.originalHeadsStampNumber.value = record.details?.originalHeadsStampNumber || '';
+  els.transStampNumber.value = record.details?.transStampNumber || '';
+  els.originalTransStampNumber.value = record.details?.originalTransStampNumber || '';
   els.drivetrain.value = record.details?.drivetrain || '';
   els.inspectionLocation.value = record.details?.inspectionLocation || '';
   els.weather.value = record.details?.weather || '';
@@ -891,10 +983,108 @@ function resetForm() {
   renderScorecardFromForm();
 }
 
+function csvEscape(value) {
+  const text = (value ?? '').toString();
+  if (text.includes('"') || text.includes(',') || text.includes('\n') || text.includes('\r')) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    const next = text[i + 1];
+
+    if (inQuotes) {
+      if (ch === '"' && next === '"') {
+        cell += '"';
+        i += 1;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        cell += ch;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      row.push(cell);
+      cell = '';
+    } else if (ch === '\n') {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = '';
+    } else if (ch !== '\r') {
+      cell += ch;
+    }
+  }
+
+  if (cell.length || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function toRepairRequestRow(record) {
+  const d = record.details || {};
+  const snapshot = record.scoreSnapshot || {};
+
+  return {
+    'Vehicle ID': record.vehicle || '',
+    'Service Type': 'Inspection',
+    'Date': record.inspectionDate || '',
+    'Cost (USD)': record.details?.repairEstimate || '',
+    'Cause': record.overallStatus || '',
+    'Notes': record.summaryNotes || '',
+    'VIN': record.vin || '',
+    'Stock Number': record.stockNumber || '',
+    'Inspector': record.inspector || '',
+    'Scoring Profile': snapshot.profileLabel || getProfileConfig(record.scoringProfile || 'dealer').label,
+    'Suggested Status': snapshot.suggestedStatus || '',
+    'Numbers Matching Result': d.numbersMatchingResult || snapshot.numbersMatchingResult || '',
+    'Numbers Matching Verification': d.numbersMatchClaim || '',
+    'Current Paint': d.paintColor || '',
+    'Original Paint': d.originalPaintColor || '',
+    'Paint Originality': d.paintOriginality || '',
+    'Current Interior': d.interiorColor || '',
+    'Original Interior': d.originalInteriorColor || '',
+    'Interior Originality': d.interiorOriginality || '',
+    'Current Engine': d.engineType || '',
+    'Original Engine': d.originalEngineType || '',
+    'Engine Originality': d.engineOriginality || '',
+    'Current Transmission': d.transmissionType || '',
+    'Original Transmission': d.originalTransmissionType || '',
+    'Transmission Originality': d.transmissionOriginality || '',
+    'Observed Block Stamp/Casting #': d.blockStampNumber || '',
+    'Original Block Stamp/Casting #': d.originalBlockStampNumber || '',
+    'Observed Heads Stamp/Casting #': d.headsStampNumber || '',
+    'Original Heads Stamp/Casting #': d.originalHeadsStampNumber || '',
+    'Observed Transmission Stamp/Casting #': d.transStampNumber || '',
+    'Original Transmission Stamp/Casting #': d.originalTransStampNumber || ''
+  };
+}
+
 function clearVehicleAndHeaderFields() {
   const ids = [
     'vehicle', 'vin', 'stockNumber', 'mileage', 'inspectionDate', 'inspector', 'overallStatus',
-    'year', 'make', 'model', 'trim', 'paintColor', 'interiorColor', 'engineType', 'transmissionType',
+    'year', 'make', 'model', 'trim', 'paintColor', 'originalPaintColor', 'paintOriginality',
+    'interiorColor', 'originalInteriorColor', 'interiorOriginality',
+    'engineType', 'originalEngineType', 'engineOriginality',
+    'transmissionType', 'originalTransmissionType', 'transmissionOriginality',
+    'numbersMatchClaim', 'blockStampNumber', 'originalBlockStampNumber',
+    'headsStampNumber', 'originalHeadsStampNumber',
+    'transStampNumber', 'originalTransStampNumber',
     'drivetrain', 'inspectionLocation', 'weather', 'titleStatus', 'sellerName', 'sellerContact',
     'drivenBy', 'testMiles', 'docsAvailable', 'immediateSafety', 'repairEstimate', 'nextServiceDate'
   ];
@@ -961,7 +1151,22 @@ function filteredRecords() {
         record.details?.model,
         record.details?.trim,
         record.details?.engineType,
+        record.details?.originalEngineType,
         record.details?.transmissionType,
+        record.details?.originalTransmissionType,
+        record.details?.numbersMatchClaim,
+        record.details?.blockStampNumber,
+        record.details?.originalBlockStampNumber,
+        record.details?.headsStampNumber,
+        record.details?.originalHeadsStampNumber,
+        record.details?.transStampNumber,
+        record.details?.originalTransStampNumber,
+        record.details?.paintColor,
+        record.details?.originalPaintColor,
+        record.details?.paintOriginality,
+        record.details?.interiorColor,
+        record.details?.originalInteriorColor,
+        record.details?.interiorOriginality,
         record.details?.sellerName,
         record.details?.sellerContact,
         record.details?.inspectionLocation,
@@ -1069,10 +1274,25 @@ function printRecord(record) {
             <div><strong>Make:</strong> ${escapeHtml(d.make)}</div>
             <div><strong>Model:</strong> ${escapeHtml(d.model)}</div>
             <div><strong>Trim:</strong> ${escapeHtml(d.trim)}</div>
-            <div><strong>Paint:</strong> ${escapeHtml(d.paintColor)}</div>
-            <div><strong>Interior:</strong> ${escapeHtml(d.interiorColor)}</div>
-            <div><strong>Engine:</strong> ${escapeHtml(d.engineType)}</div>
-            <div><strong>Transmission:</strong> ${escapeHtml(d.transmissionType)}</div>
+            <div><strong>Current Paint:</strong> ${escapeHtml(d.paintColor)}</div>
+            <div><strong>Original Paint:</strong> ${escapeHtml(d.originalPaintColor)}</div>
+            <div><strong>Paint Originality:</strong> ${escapeHtml(d.paintOriginality)}</div>
+            <div><strong>Current Interior:</strong> ${escapeHtml(d.interiorColor)}</div>
+            <div><strong>Original Interior:</strong> ${escapeHtml(d.originalInteriorColor)}</div>
+            <div><strong>Interior Originality:</strong> ${escapeHtml(d.interiorOriginality)}</div>
+            <div><strong>Current Engine:</strong> ${escapeHtml(d.engineType)}</div>
+            <div><strong>Original Engine:</strong> ${escapeHtml(d.originalEngineType)}</div>
+            <div><strong>Engine Originality:</strong> ${escapeHtml(d.engineOriginality)}</div>
+            <div><strong>Current Transmission:</strong> ${escapeHtml(d.transmissionType)}</div>
+            <div><strong>Original Transmission:</strong> ${escapeHtml(d.originalTransmissionType)}</div>
+            <div><strong>Transmission Originality:</strong> ${escapeHtml(d.transmissionOriginality)}</div>
+            <div><strong>Numbers Matching:</strong> ${escapeHtml(d.numbersMatchClaim)}</div>
+            <div><strong>Observed Block Stamp/Casting #:</strong> ${escapeHtml(d.blockStampNumber)}</div>
+            <div><strong>Original Block Stamp/Casting #:</strong> ${escapeHtml(d.originalBlockStampNumber)}</div>
+            <div><strong>Observed Heads Stamp/Casting #:</strong> ${escapeHtml(d.headsStampNumber)}</div>
+            <div><strong>Original Heads Stamp/Casting #:</strong> ${escapeHtml(d.originalHeadsStampNumber)}</div>
+            <div><strong>Observed Transmission Stamp/Casting #:</strong> ${escapeHtml(d.transStampNumber)}</div>
+            <div><strong>Original Transmission Stamp/Casting #:</strong> ${escapeHtml(d.originalTransStampNumber)}</div>
             <div><strong>Drivetrain:</strong> ${escapeHtml(d.drivetrain)}</div>
             <div><strong>Location:</strong> ${escapeHtml(d.inspectionLocation)}</div>
             <div><strong>Weather:</strong> ${escapeHtml(d.weather)}</div>
@@ -1161,12 +1381,24 @@ function renderTable() {
 }
 
 function exportJson() {
-  const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+  const rows = records.map(toRepairRequestRow);
+  if (!rows.length) {
+    alert('No records to export.');
+    return;
+  }
+
+  const headers = Object.keys(rows[0]);
+  const csv = [
+    headers.map(csvEscape).join(','),
+    ...rows.map(row => headers.map(h => csvEscape(row[h])).join(','))
+  ].join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const stamp = new Date().toISOString().slice(0, 10);
   a.href = url;
-  a.download = `inspection-records-${stamp}.json`;
+  a.download = `repair-request-data-dump-${stamp}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -1179,24 +1411,111 @@ function importJsonFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const parsed = JSON.parse(reader.result);
-      if (!Array.isArray(parsed)) throw new Error('File must contain an array of records.');
+      const parsedRows = parseCsv((reader.result || '').toString());
+      if (parsedRows.length < 2) throw new Error('CSV file has no data rows.');
+
+      const headers = parsedRows[0].map(h => normalizeText(h));
+      const dataRows = parsedRows.slice(1);
 
       const mergedById = new Map(records.map(r => [r.id, r]));
-      parsed.forEach(item => {
-        if (!item || typeof item !== 'object') return;
-        const id = item.id || `insp_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-        item.id = id;
-        mergedById.set(item.id, item);
+      dataRows.forEach((row, idx) => {
+        if (!row || !row.length) return;
+
+        const get = name => {
+          const i = headers.indexOf(normalizeText(name));
+          return i >= 0 ? (row[i] || '').toString().trim() : '';
+        };
+
+        const vehicle = get('Vehicle ID');
+        const inspectionDate = get('Date');
+        const vin = get('VIN');
+        const stockNumber = get('Stock Number').replace(/\D/g, '').slice(0, 5);
+        const inspector = get('Inspector');
+        const overallStatus = get('Cause') || 'Needs Attention';
+        const repairEstimate = get('Cost (USD)');
+        const summaryNotes = get('Notes');
+
+        const id = `insp_csv_${Date.now()}_${idx}`;
+        const record = {
+          id,
+          vehicle,
+          vin,
+          stockNumber,
+          mileage: '',
+          inspectionDate,
+          inspector,
+          overallStatus,
+          scoringProfile: 'dealer',
+          details: {
+            year: '',
+            make: '',
+            model: '',
+            trim: '',
+            paintColor: get('Current Paint'),
+            originalPaintColor: get('Original Paint'),
+            paintOriginality: get('Paint Originality'),
+            interiorColor: get('Current Interior'),
+            originalInteriorColor: get('Original Interior'),
+            interiorOriginality: get('Interior Originality'),
+            engineType: get('Current Engine'),
+            originalEngineType: get('Original Engine'),
+            engineOriginality: get('Engine Originality'),
+            transmissionType: get('Current Transmission'),
+            originalTransmissionType: get('Original Transmission'),
+            transmissionOriginality: get('Transmission Originality'),
+            numbersMatchClaim: get('Numbers Matching Verification'),
+            blockStampNumber: get('Observed Block Stamp/Casting #'),
+            originalBlockStampNumber: get('Original Block Stamp/Casting #'),
+            headsStampNumber: get('Observed Heads Stamp/Casting #'),
+            originalHeadsStampNumber: get('Original Heads Stamp/Casting #'),
+            transStampNumber: get('Observed Transmission Stamp/Casting #'),
+            originalTransStampNumber: get('Original Transmission Stamp/Casting #'),
+            numbersMatchingResult: get('Numbers Matching Result'),
+            drivetrain: '',
+            inspectionLocation: '',
+            weather: '',
+            titleStatus: '',
+            sellerName: '',
+            sellerContact: '',
+            drivenBy: '',
+            testMiles: '',
+            docsAvailable: '',
+            immediateSafety: '',
+            repairEstimate,
+            nextServiceDate: ''
+          },
+          checkpoints: collectCheckpointsFromForm(),
+          autoStatusEnabled: true,
+          scoreSnapshot: {
+            profileKey: 'dealer',
+            profileLabel: getProfileConfig('dealer').label,
+            suggestedStatus: get('Suggested Status') || overallStatus,
+            suggestedRule: 'Imported from repair-request CSV',
+            numbersMatchingResult: get('Numbers Matching Result'),
+            completionPct: 0,
+            qualityPct: 0,
+            weightedQualityPct: 0,
+            qualityTier: 'Unverified',
+            pass: 0,
+            attention: 0,
+            fail: 0,
+            notChecked: 0
+          },
+          summaryNotes,
+          photoLinks: [],
+          updatedAt: new Date().toISOString()
+        };
+
+        mergedById.set(record.id, record);
       });
 
       records = Array.from(mergedById.values());
       saveRecords();
       renderTable();
-      alert(`Imported ${parsed.length} record(s).`);
+      alert(`Imported ${dataRows.length} record(s) from spreadsheet CSV.`);
     } catch (error) {
       console.error(error);
-      alert('Could not import records. Please check file format.');
+      alert('Could not import CSV. Please check spreadsheet format and headers.');
     }
   };
 
