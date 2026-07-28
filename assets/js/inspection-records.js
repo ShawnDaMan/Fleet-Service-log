@@ -365,6 +365,7 @@ const els = {
   passedReports: document.getElementById('passedReports'),
   attentionReports: document.getElementById('attentionReports'),
   failedReports: document.getElementById('failedReports'),
+  fillTemplateBtn: document.getElementById('fillTemplateBtn'),
   resetFormBtn: document.getElementById('resetFormBtn'),
   printCurrentBtn: document.getElementById('printCurrentBtn'),
   createSheetTabBtn: document.getElementById('createSheetTabBtn'),
@@ -1476,6 +1477,77 @@ function clearSummaryAndPhotos() {
   els.photoLinks.value = '';
 }
 
+function fillTemplateData() {
+  const now = new Date();
+  const stamp = String(now.getTime()).slice(-6);
+
+  els.editingId.value = '';
+  els.scoringProfile.value = 'dealer';
+  els.year.value = '1969';
+  els.make.value = 'Chevrolet';
+  els.model.value = 'Camaro';
+  els.trim.value = 'SS';
+  syncVehicleFromParts();
+
+  els.vin.value = `TESTVIN${stamp}`;
+  els.stockNumber.value = stamp.slice(0, 5).padStart(5, '0');
+  els.mileage.value = '45210';
+  els.inspectionDate.value = now.toISOString().slice(0, 10);
+  els.inspector.value = 'Template Tester';
+  els.overallStatus.value = 'Needs Attention';
+
+  els.paintColor.value = 'Blue';
+  els.originalPaintColor.value = 'Blue';
+  els.paintOriginality.value = 'Original';
+  els.interiorColor.value = 'Black';
+  els.originalInteriorColor.value = 'Black';
+  els.interiorOriginality.value = 'Original';
+  els.engineType.value = '396 V8';
+  els.originalEngineType.value = '396 V8';
+  els.engineOriginality.value = 'Original';
+  els.transmissionType.value = '4-Speed Manual';
+  els.originalTransmissionType.value = '4-Speed Manual';
+  els.transmissionOriginality.value = 'Original';
+  els.numbersMatchClaim.value = 'Yes - Numbers Matching';
+  els.blockStampNumber.value = `OBS-BLK-${stamp}`;
+  els.originalBlockStampNumber.value = `ORG-BLK-${stamp}`;
+  els.headsStampNumber.value = `OBS-HDS-${stamp}`;
+  els.originalHeadsStampNumber.value = `ORG-HDS-${stamp}`;
+  els.transStampNumber.value = `OBS-TRN-${stamp}`;
+  els.originalTransStampNumber.value = `ORG-TRN-${stamp}`;
+
+  els.drivetrain.value = 'RWD';
+  els.inspectionLocation.value = 'Main Shop Bay 1';
+  els.weather.value = 'Dry';
+  els.titleStatus.value = 'Regular';
+  els.sellerName.value = 'Test Owner';
+  els.sellerContact.value = '555-0100';
+  els.drivenBy.value = 'Inspector';
+  els.testMiles.value = '3.2';
+  els.docsAvailable.value = 'Yes';
+  els.immediateSafety.value = 'No';
+  els.repairEstimate.value = '1250';
+  els.nextServiceDate.value = now.toISOString().slice(0, 10);
+  els.summaryNotes.value = 'Template test record: baseline inspection data for workflow validation.';
+  els.photoLinks.value = 'https://example.com/photo1\nhttps://example.com/photo2';
+
+  CHECKPOINT_SECTIONS.forEach((section, sectionIndex) => {
+    section.items.forEach((item, itemIndex) => {
+      const statusEl = document.getElementById(checkpointStatusId(section.key, item.key));
+      const notesEl = document.getElementById(checkpointNotesId(section.key, item.key));
+      if (statusEl) {
+        statusEl.value = itemIndex % 7 === 0 ? 'Needs Attention' : 'Pass';
+      }
+      if (notesEl) {
+        notesEl.value = `Template note for ${section.title}: ${item.label}`;
+      }
+    });
+  });
+
+  els.autoStatusToggle.checked = true;
+  renderScorecardFromForm();
+}
+
 function checkpointSearchBlob(record) {
   if (!record.checkpoints) return '';
 
@@ -2000,6 +2072,12 @@ function wireEvents() {
   els.stockNumber.addEventListener('input', () => {
     els.stockNumber.value = (els.stockNumber.value || '').replace(/\D/g, '').slice(0, 5);
   });
+  if (els.fillTemplateBtn) {
+    els.fillTemplateBtn.addEventListener('click', () => {
+      fillTemplateData();
+      alert('Template data loaded across all fields and checkpoint notes.');
+    });
+  }
   els.resetFormBtn.addEventListener('click', resetForm);
   els.clearVehicleDetailsBtn.addEventListener('click', clearVehicleAndHeaderFields);
   els.clearCheckpointsBtn.addEventListener('click', clearCheckpointsOnly);
