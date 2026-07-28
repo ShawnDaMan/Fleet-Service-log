@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inspection Records - Fleet Service Log</title>
+  <link rel="icon" type="image/jpeg" href="favicon.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #6b7280;
+      --surface: #ffffff;
+      --brand: #0f766e;
+      --brand-2: #0ea5e9;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --ok: #16a34a;
+      --line: #dbe2ea;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 20%, rgba(14, 165, 233, 0.2), transparent 35%),
+        radial-gradient(circle at 80% 10%, rgba(15, 118, 110, 0.25), transparent 40%),
+        linear-gradient(180deg, #f7fbfc 0%, #eef5f7 100%);
+      position: relative;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 16px 44px;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+
+    .topbar a {
+      text-decoration: none;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+
+    .btn-home { background: #0f766e; }
+    .btn-readiness { background: #2563eb; }
+    .btn-charts { background: #d97706; }
+
+    .hero {
+      background: linear-gradient(135deg, #0f766e 0%, #0ea5e9 100%);
+      color: white;
+      border-radius: 16px;
+      padding: 26px 22px;
+      box-shadow: 0 14px 24px rgba(15, 118, 110, 0.2);
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      text-align: left;
+      color: white;
+      font-size: 2rem;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+      text-shadow: none;
+      font-weight: 900;
+      letter-spacing: 0.4px;
+    }
+
+    .hero p {
+      margin: 10px 0 0;
+      opacity: 0.95;
+      max-width: 760px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 18px 0 20px;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 12px;
+      box-shadow: 0 5px 10px rgba(31, 41, 51, 0.06);
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .stat .value {
+      margin-top: 6px;
+      font-weight: 900;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+      font-size: 1.5rem;
+      color: #0f172a;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(31, 41, 51, 0.08);
+      margin-bottom: 16px;
+    }
+
+    .panel h2 {
+      text-align: left;
+      margin: 0 0 12px;
+      color: #0f172a;
+      font-size: 1.2rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field label {
+      font-size: 0.86rem;
+      color: #334155;
+      font-weight: 700;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fbfdff;
+      padding: 9px 10px;
+      font-size: 0.95rem;
+      font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
+      box-sizing: border-box;
+    }
+
+    .field textarea {
+      min-height: 86px;
+      resize: vertical;
+    }
+
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+
+    .checklist {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .checkpoints-wrap {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .checkpoint-section {
+      border: 1px solid #d9e3ef;
+      border-radius: 10px;
+      background: #f9fcff;
+      overflow: hidden;
+    }
+
+    .checkpoint-section h3 {
+      margin: 0;
+      padding: 10px 12px;
+      background: #eaf4fb;
+      border-bottom: 1px solid #d9e3ef;
+      font-size: 0.97rem;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+
+    .checkpoint-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+      background: transparent;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .checkpoint-table th,
+    .checkpoint-table td {
+      padding: 8px;
+      border-bottom: 1px solid #e3ecf5;
+      vertical-align: top;
+      font-size: 0.86rem;
+    }
+
+    .checkpoint-table th {
+      background: #f3f8fd;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .checkpoint-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .checkpoint-table select,
+    .checkpoint-table input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .check-item {
+      border: 1px solid #d9e3ef;
+      border-radius: 10px;
+      padding: 10px;
+      background: #f9fcff;
+    }
+
+    .check-item h3 {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+      color: #0f172a;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    /* Reset shared site button defaults so this page controls sizing and spacing. */
+    button {
+      width: auto;
+      margin-top: 0;
+      letter-spacing: normal;
+    }
+
+    .actions button,
+    .actions label.file-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+      font-size: 0.9rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .save { background: var(--brand); }
+    .clear { background: #64748b; }
+    .print { background: var(--brand-2); }
+    .export { background: #1d4ed8; }
+    .delete { background: var(--danger); }
+
+    .file-input { display: none; }
+
+    .row-actions {
+      white-space: nowrap;
+    }
+
+    .row-actions button {
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      margin-right: 6px;
+      margin-bottom: 4px;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.8rem;
+      width: auto;
+    }
+
+    .row-actions button[data-action="edit"] { background: #0284c7; }
+    .row-actions button[data-action="print"] { background: #475569; }
+    .row-actions button[data-action="delete"] { background: #dc2626; }
+
+    .scorecard-wrap {
+      margin-top: 12px;
+      border: 1px solid #d9e3ef;
+      border-radius: 10px;
+      background: #f8fbff;
+      padding: 12px;
+    }
+
+    .score-top {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .score-pill {
+      border: 1px solid #d8e3ef;
+      border-radius: 10px;
+      background: white;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .score-pill .k {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+
+    .score-pill .v {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #0f172a;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+
+    .quality-tier {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: white;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+
+    .tier-concours { background: #14532d; }
+    .tier-excellent { background: #166534; }
+    .tier-good { background: #15803d; }
+    .tier-fair { background: #ca8a04; }
+    .tier-rough { background: #b45309; }
+    .tier-project { background: #b91c1c; }
+    .tier-unverified { background: #475569; }
+
+    .suggest-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .suggested-badge {
+      border-radius: 999px;
+      padding: 5px 12px;
+      color: white;
+      font-weight: 800;
+      font-size: 0.8rem;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+
+    .suggested-pass { background: #16a34a; }
+    .suggested-attn { background: #d97706; }
+    .suggested-fail { background: #dc2626; }
+
+    .score-note {
+      color: #64748b;
+      font-size: 0.82rem;
+    }
+
+    .score-mismatch {
+      color: #b45309;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .section-score-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: none;
+      margin-top: 0;
+    }
+
+    .section-score-table th,
+    .section-score-table td {
+      border-bottom: 1px solid #e8eef6;
+      padding: 7px;
+      font-size: 0.82rem;
+    }
+
+    .section-score-table th {
+      background: #eef5fc;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .clear-tools {
+      margin-top: 12px;
+      border: 1px dashed #c5d3e2;
+      border-radius: 10px;
+      background: #f8fafc;
+      padding: 10px;
+    }
+
+    .clear-tools h4 {
+      margin: 0 0 8px;
+      font-size: 0.92rem;
+      color: #0f172a;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+
+    .clear-tools .tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tool-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+    }
+
+    .tool-soft { background: #64748b; }
+    .tool-mid { background: #0ea5e9; }
+    .tool-warn { background: #d97706; }
+    .tool-danger { background: #dc2626; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      border-bottom: 1px solid #e7eef5;
+      padding: 9px 8px;
+      text-align: left;
+      font-size: 0.9rem;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eaf4fb;
+      color: #0f172a;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+      font-size: 0.82rem;
+    }
+
+    .status-badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: white;
+    }
+
+    .status-pass { background: var(--ok); }
+    .status-attn { background: var(--warn); }
+    .status-fail { background: var(--danger); }
+
+    .tiny {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      .span-3 { grid-column: span 2; }
+      .checklist { grid-template-columns: 1fr; }
+      .score-top { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 680px) {
+      .grid { grid-template-columns: 1fr; }
+      .span-2, .span-3 { grid-column: span 1; }
+      .hero h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <a class="btn-home" href="index.html">Service Log</a>
+      <a class="btn-readiness" href="vehicle_readiness.html">Vehicle Readiness</a>
+      <a class="btn-charts" href="fleet_service_charts.html">Charts</a>
+    </div>
+
+    <section class="hero">
+      <h1>Inspection Records</h1>
+      <p>Create inspection records, keep them on this device, search them instantly, and export backups whenever you want.</p>
+    </section>
+
+    <section class="stats">
+      <div class="stat"><div class="label">Total Reports</div><div id="totalReports" class="value">0</div></div>
+      <div class="stat"><div class="label">Passed</div><div id="passedReports" class="value">0</div></div>
+      <div class="stat"><div class="label">Needs Attention</div><div id="attentionReports" class="value">0</div></div>
+      <div class="stat"><div class="label">Not Ready</div><div id="failedReports" class="value">0</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>New Inspection</h2>
+      <form id="inspectionForm">
+        <div class="grid">
+          <div class="field">
+            <label for="vehicle">Vehicle</label>
+            <input id="vehicle" required readonly placeholder="Auto: Year + Make + Model">
+          </div>
+          <div class="field">
+            <label for="vin">VIN</label>
+            <input id="vin" placeholder="Optional">
+          </div>
+          <div class="field">
+            <label for="stockNumber">Stock Number</label>
+            <input id="stockNumber" type="text" inputmode="numeric" pattern="\d{3,5}" minlength="3" maxlength="5" required title="Stock Number must be 3 to 5 digits" placeholder="e.g. 12345">
+          </div>
+          <div class="field">
+            <label for="mileage">Mileage</label>
+            <input id="mileage" type="number" min="0" step="1" placeholder="632">
+          </div>
+          <div class="field">
+            <label for="inspectionDate">Inspection Date</label>
+            <input id="inspectionDate" type="date" required>
+          </div>
+          <div class="field">
+            <label for="inspector">Inspector</label>
+            <input id="inspector" required placeholder="Your name">
+          </div>
+          <div class="field">
+            <label for="overallStatus">Overall Status</label>
+            <select id="overallStatus" required>
+              <option value="">Select</option>
+              <option value="Pass">Pass</option>
+              <option value="Needs Attention">Needs Attention</option>
+              <option value="Not Ready">Not Ready</option>
+            </select>
+            <div id="statusMismatchNote" class="score-mismatch" style="display:none; margin-top:6px;"></div>
+          </div>
+          <div class="field">
+            <label for="scoringProfile">Scoring Profile</label>
+            <select id="scoringProfile">
+              <option value="dealer" selected>Dealer (Balanced)</option>
+              <option value="concours">Concours (Strict)</option>
+              <option value="driver">Driver (Practical)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top:12px;">
+          <div class="field">
+            <label for="year">Year</label>
+            <input id="year" placeholder="1965">
+          </div>
+          <div class="field">
+            <label for="make">Make</label>
+            <input id="make" placeholder="Shelby">
+          </div>
+          <div class="field">
+            <label for="model">Model</label>
+            <input id="model" placeholder="Cobra Replica">
+          </div>
+          <div class="field">
+            <label for="trim">Trim</label>
+            <input id="trim" placeholder="Optional">
+          </div>
+          <div class="field">
+            <label for="paintColor">Paint Color</label>
+            <input id="paintColor" placeholder="Blue / White Stripes">
+          </div>
+          <div class="field">
+            <label for="interiorColor">Interior Color</label>
+            <input id="interiorColor" placeholder="Black">
+          </div>
+          <div class="field">
+            <label for="engineType">Engine</label>
+            <input id="engineType" placeholder="Chevrolet 350 / 383 V8">
+          </div>
+          <div class="field">
+            <label for="transmissionType">Transmission</label>
+            <input id="transmissionType" placeholder="Automatic / Manual">
+          </div>
+          <div class="field">
+            <label for="drivetrain">Drivetrain</label>
+            <input id="drivetrain" placeholder="RWD / AWD / FWD">
+          </div>
+          <div class="field">
+            <label for="inspectionLocation">Inspection Location</label>
+            <input id="inspectionLocation" placeholder="Shop, lot, etc.">
+          </div>
+          <div class="field">
+            <label for="weather">Weather</label>
+            <input id="weather" placeholder="Dry / Rain / Hot / Cold">
+          </div>
+          <div class="field">
+            <label for="titleStatus">Title Status</label>
+            <select id="titleStatus">
+              <option value="">Select</option>
+              <option>Regular</option>
+              <option>Salvage</option>
+              <option>Rebuilt</option>
+              <option>Not Available</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="sellerName">Seller / Owner</label>
+            <input id="sellerName" placeholder="Name">
+          </div>
+          <div class="field">
+            <label for="sellerContact">Seller Contact</label>
+            <input id="sellerContact" placeholder="Phone or email">
+          </div>
+          <div class="field">
+            <label for="drivenBy">Road Test Driven By</label>
+            <select id="drivenBy">
+              <option value="">Select</option>
+              <option>Inspector</option>
+              <option>Seller</option>
+              <option>Not Driven</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="testMiles">Road Test Distance (miles)</label>
+            <input id="testMiles" type="number" min="0" step="0.1" placeholder="2.0">
+          </div>
+          <div class="field">
+            <label for="docsAvailable">Records/Documents Available</label>
+            <select id="docsAvailable">
+              <option value="">Select</option>
+              <option>Yes</option>
+              <option>Partial</option>
+              <option>No</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="immediateSafety">Immediate Safety Concern</label>
+            <select id="immediateSafety">
+              <option value="">Select</option>
+              <option>No</option>
+              <option>Yes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="repairEstimate">Estimated Repair Cost</label>
+            <input id="repairEstimate" type="number" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div class="field">
+            <label for="nextServiceDate">Next Service Date</label>
+            <input id="nextServiceDate" type="date">
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <h3 style="margin:0 0 8px; font-size:1rem; color:#0f172a; font-family:'Montserrat','Roboto',Arial,sans-serif;">Detailed Checkpoints</h3>
+          <div class="tiny" style="margin-bottom:8px;">Each checkpoint stores a status and notes so you can capture full inspection detail.</div>
+          <div id="checkpointsContainer" class="checkpoints-wrap"></div>
+        </div>
+
+        <div class="scorecard-wrap">
+          <div class="suggest-row">
+            <div><strong>Suggested Overall Status:</strong> <span id="suggestedStatusBadge" class="suggested-badge suggested-attn">Needs Attention</span></div>
+            <label style="display:flex; align-items:center; gap:6px; margin:0; font-size:0.86rem; font-weight:700; color:#0f172a;">
+              <input id="autoStatusToggle" type="checkbox" checked style="width:auto;">
+              Auto-apply suggestion
+            </label>
+            <span id="statusRuleText" class="score-note"></span>
+          </div>
+
+          <div class="score-top">
+            <div class="score-pill"><div class="k">Pass</div><div class="v" id="scorePassCount">0</div></div>
+            <div class="score-pill"><div class="k">Attention</div><div class="v" id="scoreAttentionCount">0</div></div>
+            <div class="score-pill"><div class="k">Fail</div><div class="v" id="scoreFailCount">0</div></div>
+            <div class="score-pill"><div class="k">Not Checked</div><div class="v" id="scoreNotCheckedCount">0</div></div>
+            <div class="score-pill"><div class="k">Completion</div><div class="v" id="scoreCompletionCount">0%</div></div>
+            <div class="score-pill"><div class="k">Weighted Quality</div><div class="v" id="scoreQualityScore">0%</div></div>
+            <div class="score-pill"><div class="k">Quality Tier</div><div class="v" id="scoreQualityTierWrap"><span id="scoreQualityTier" class="quality-tier tier-unverified">Unverified</span></div></div>
+          </div>
+
+          <table class="section-score-table">
+            <thead>
+              <tr>
+                <th>Section</th>
+                <th>Weight</th>
+                <th>Pass</th>
+                <th>Attn</th>
+                <th>Fail</th>
+                <th>Not Checked</th>
+                <th>Completion</th>
+                <th>Quality</th>
+              </tr>
+            </thead>
+            <tbody id="sectionScoreTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="grid" style="margin-top:12px;">
+          <div class="field span-3">
+            <label for="summaryNotes">Summary Notes</label>
+            <textarea id="summaryNotes" placeholder="Big findings, recommended repairs, and next steps"></textarea>
+          </div>
+          <div class="field span-3">
+            <label for="photoLinks">Photo Links (one URL per line)</label>
+            <textarea id="photoLinks" placeholder="https://...\nhttps://..."></textarea>
+          </div>
+        </div>
+
+        <input type="hidden" id="editingId">
+
+        <div class="actions">
+          <button class="save" id="saveRecordBtn" type="submit">Save Record</button>
+          <button class="clear" type="button" id="resetFormBtn">Clear Form</button>
+          <button class="print" type="button" id="printCurrentBtn">Print Current Form</button>
+        </div>
+
+        <div class="clear-tools">
+          <h4>Clear Tools</h4>
+          <div class="tools">
+            <button class="tool-btn tool-soft" type="button" id="clearVehicleDetailsBtn">Clear Vehicle and Header Fields</button>
+            <button class="tool-btn tool-mid" type="button" id="clearCheckpointsBtn">Clear Checkpoints Only</button>
+            <button class="tool-btn tool-warn" type="button" id="clearNotesBtn">Clear Summary and Photo Links</button>
+            <button class="tool-btn tool-danger" type="button" id="clearAllFormBtn">Clear Entire Form</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Records</h2>
+      <div class="grid" style="margin-bottom:10px;">
+        <div class="field span-2">
+          <label for="searchInput">Search</label>
+          <input id="searchInput" placeholder="Search by vehicle, VIN, inspector, notes">
+        </div>
+        <div class="field">
+          <label for="statusFilter">Status Filter</label>
+          <select id="statusFilter">
+            <option value="">All</option>
+            <option value="Pass">Pass</option>
+            <option value="Needs Attention">Needs Attention</option>
+            <option value="Not Ready">Not Ready</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:0; margin-bottom:8px;">
+        <button class="export" type="button" id="exportJsonBtn">Export Records (JSON)</button>
+        <label class="file-btn export" for="importJsonInput">Import Records (JSON)</label>
+        <input class="file-input" id="importJsonInput" type="file" accept="application/json,.json">
+        <button class="delete" type="button" id="clearAllBtn">Delete All Records</button>
+      </div>
+
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Vehicle</th>
+              <th>VIN</th>
+              <th>Inspector</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="recordsTableBody">
+            <tr><td colspan="6" class="tiny">No records yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tiny" style="margin-top:8px;">Records are saved in this browser on this device.</div>
+    </section>
+  </div>
+
+  <script src="assets/js/inspection-records.js"></script>
+</body>
+</html>
