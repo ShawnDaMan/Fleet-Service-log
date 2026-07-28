@@ -526,8 +526,33 @@ function getSpreadsheetHeaders() {
     'Repair Estimate',
     'Next Service Date',
     'Summary Notes',
-    'Photo Links'
+    'Photo Links',
+    ...getCheckpointSpreadsheetHeaders()
   ];
+}
+
+function getCheckpointSpreadsheetHeaders() {
+  const headers = [];
+  CHECKPOINT_SECTIONS.forEach(section => {
+    section.items.forEach(item => {
+      const base = `${section.title} - ${item.label}`;
+      headers.push(`${base} Status`);
+      headers.push(`${base} Notes`);
+    });
+  });
+  return headers;
+}
+
+function getCheckpointSpreadsheetValues(record) {
+  const values = [];
+  CHECKPOINT_SECTIONS.forEach(section => {
+    section.items.forEach(item => {
+      const saved = record.checkpoints?.[section.key]?.[item.key] || {};
+      values.push(saved.status || 'Not Checked');
+      values.push(saved.notes || '');
+    });
+  });
+  return values;
 }
 
 function toSpreadsheetRow(record) {
@@ -585,7 +610,8 @@ function toSpreadsheetRow(record) {
     d.repairEstimate || '',
     d.nextServiceDate || '',
     record.summaryNotes || '',
-    (record.photoLinks || []).join(' | ')
+    (record.photoLinks || []).join(' | '),
+    ...getCheckpointSpreadsheetValues(record)
   ];
 }
 
