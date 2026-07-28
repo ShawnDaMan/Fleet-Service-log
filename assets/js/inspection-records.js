@@ -394,6 +394,10 @@ function normalizeText(value) {
   return (value || '').toString().trim().toLowerCase();
 }
 
+function normalizeVin(value) {
+  return (value || '').toString().trim().toUpperCase();
+}
+
 function composeVehicleFromParts(year, make, model) {
   return [year, make, model]
     .map(part => (part || '').toString().trim())
@@ -585,6 +589,17 @@ function toSpreadsheetRow(record) {
   ];
 }
 
+function columnIndexToA1(colIndex) {
+  let n = Number(colIndex) || 1;
+  let out = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out || 'A';
+}
+
 async function initGoogleClientIfNeeded() {
   if (googleClientReady) return;
 
@@ -730,16 +745,50 @@ async function ensureSpreadsheetHeader(sheetTitle) {
 async function appendRecordToSpreadsheet(record) {
   await ensureAccessToken();
   const sheetTitle = await createOrVerifySpreadsheetTab();
+  const vin = normalizeVin(record.vin);
+
+  if (!vin) {
+    throw new Error('VIN is required for spreadsheet sync.');
+  }
+
+  const headers = getSpreadsheetHeaders();
+  const vinColIndex = headers.indexOf('VIN') + 1;
+  const lastCol = columnIndexToA1(headers.length);
+
+  // VIN column read starts from row 2 to skip header.
+  const vinColumnRange = `${sheetTitle}!${columnIndexToA1(vinColIndex)}2:${columnIndexToA1(vinColIndex)}`;
+  const vinRead = await gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+    range: vinColumnRange
+  });
+
+  const vinRows = vinRead.result?.values || [];
+  const rowOffset = vinRows.findIndex(r => normalizeVin(r?.[0]) === vin);
+
+  if (rowOffset >= 0) {
+    const targetRow = rowOffset + 2;
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+      range: `${sheetTitle}!A${targetRow}:${lastCol}${targetRow}`,
+      valueInputOption: 'USER_ENTERED',
+      resource: {
+        values: [toSpreadsheetRow(record)]
+      }
+    });
+    return 'updated';
+  }
 
   await gapi.client.sheets.spreadsheets.values.append({
     spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
-    range: `${sheetTitle}!A:AZ`,
+    range: `${sheetTitle}!A:${lastCol}`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     resource: {
       values: [toSpreadsheetRow(record)]
     }
   });
+
+  return 'appended';
 }
 
 function getActiveProfileKey() {
@@ -1847,6 +1896,15 @@ function handleSubmit(event) {
   const stockValue = (els.stockNumber.value || '').replace(/\D/g, '').slice(0, 5);
   els.stockNumber.value = stockValue;
 
+  const vinValue = normalizeVin(els.vin.value);
+  els.vin.value = vinValue;
+
+  if (!vinValue) {
+    alert('VIN is required. It is used as the unique vehicle identifier.');
+    els.vin.focus();
+    return;
+  }
+
   if (!/^\d{3,5}$/.test(stockValue)) {
     alert('Stock Number must be numeric and between 3 and 5 digits.');
     els.stockNumber.focus();
@@ -1855,13 +1913,29 @@ function handleSubmit(event) {
 
   renderScorecardFromForm();
   const record = buildRecordFromForm();
-  const existingIndex = records.findIndex(r => r.id === record.id);
-  const isNewRecord = existingIndex < 0;
+  const currentVin = normalizeVin(record.vin);
+  const vinIndex = records.findIndex(r => normalizeVin(r.vin) === currentVin);
+  const editingIndex = records.findIndex(r => r.id === record.id);
 
-  if (existingIndex >= 0) {
-    records[existingIndex] = record;
+  let localAction = 'created';
+
+  if (vinIndex >= 0) {
+    // VIN is the unique key: overwrite existing inspection for that VIN.
+    const existingByVin = records[vinIndex];
+    record.id = existingByVin.id;
+    records[vinIndex] = record;
+    localAction = 'updated';
+
+    // If editing a different row and VIN now collides, remove the old edited row.
+    if (editingIndex >= 0 && editingIndex !== vinIndex) {
+      records.splice(editingIndex, 1);
+    }
+  } else if (editingIndex >= 0) {
+    records[editingIndex] = record;
+    localAction = 'updated';
   } else {
     records.push(record);
+    localAction = 'created';
   }
 
   // Keep working on the same record instead of clearing everything.
@@ -1870,24 +1944,24 @@ function handleSubmit(event) {
   saveRecords();
   renderTable();
 
-  if (isNewRecord) {
-    appendRecordToSpreadsheet(record)
-      .then(() => {
-        const rowIndex = records.findIndex(r => r.id === record.id);
-        if (rowIndex >= 0) {
-          records[rowIndex].sheetSyncedAt = new Date().toISOString();
-          saveRecords();
-        }
-        alert('Record saved and appended to your Google Sheet tab as a new row.');
-      })
-      .catch(error => {
-        console.error('Spreadsheet append failed:', error);
-        alert('Record saved locally, but Google Sheet append failed. Sign in when prompted and try Save again for this inspection.');
-      });
-    return;
-  }
+  appendRecordToSpreadsheet(record)
+    .then(syncAction => {
+      const rowIndex = records.findIndex(r => r.id === record.id);
+      if (rowIndex >= 0) {
+        records[rowIndex].sheetSyncedAt = new Date().toISOString();
+        saveRecords();
+      }
 
-  alert('Record updated. Existing spreadsheet rows are not overwritten.');
+      if (syncAction === 'updated') {
+        alert(`Record ${localAction} locally and updated in Google Sheet for VIN ${record.vin}.`);
+      } else {
+        alert(`Record ${localAction} locally and appended to Google Sheet for VIN ${record.vin}.`);
+      }
+    })
+    .catch(error => {
+      console.error('Spreadsheet sync failed:', error);
+      alert('Record saved locally, but Google Sheet sync failed. Sign in when prompted and try Save again.');
+    });
 }
 
 function wireEvents() {

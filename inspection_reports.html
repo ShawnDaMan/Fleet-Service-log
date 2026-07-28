@@ -543,7 +543,7 @@
           </div>
           <div class="field">
             <label for="vin">VIN</label>
-            <input id="vin" placeholder="Optional">
+            <input id="vin" required placeholder="Required - unique vehicle identifier">
           </div>
           <div class="field">
             <label for="stockNumber">Stock Number</label>
@@ -893,7 +893,7 @@
           </tbody>
         </table>
       </div>
-      <div class="tiny" style="margin-top:8px;">Each new inspection save appends one new row into a single Google Sheet tab named Inspection Records. Records are also saved in this browser on this device.</div>
+      <div class="tiny" style="margin-top:8px;">VIN is the unique key. New VINs append as new rows; saving an existing VIN overwrites that vehicle inspection row in the single Google Sheet tab named Inspection Records. Records are also saved in this browser on this device.</div>
     </section>
   </div>
 
