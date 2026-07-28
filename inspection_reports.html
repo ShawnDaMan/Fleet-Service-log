@@ -635,76 +635,6 @@
             </select>
           </div>
           <div class="field">
-            <label for="engineType">Current Engine</label>
-            <input id="engineType" placeholder="Chevrolet 350 / 383 V8">
-          </div>
-          <div class="field">
-            <label for="originalEngineType">Original Engine</label>
-            <input id="originalEngineType" placeholder="Factory engine spec/code">
-          </div>
-          <div class="field">
-            <label for="engineOriginality">Engine Originality</label>
-            <select id="engineOriginality">
-              <option value="">Select</option>
-              <option>Original</option>
-              <option>Not Original</option>
-              <option>Partially Original</option>
-              <option>Unknown</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="transmissionType">Current Transmission</label>
-            <input id="transmissionType" placeholder="Automatic / Manual">
-          </div>
-          <div class="field">
-            <label for="originalTransmissionType">Original Transmission</label>
-            <input id="originalTransmissionType" placeholder="Factory transmission spec/code">
-          </div>
-          <div class="field">
-            <label for="transmissionOriginality">Transmission Originality</label>
-            <select id="transmissionOriginality">
-              <option value="">Select</option>
-              <option>Original</option>
-              <option>Not Original</option>
-              <option>Partially Original</option>
-              <option>Unknown</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="numbersMatchClaim">Numbers Matching Verification</label>
-            <select id="numbersMatchClaim">
-              <option value="">Select</option>
-              <option>Yes - Numbers Matching</option>
-              <option>Partial Match</option>
-              <option>No - Not Numbers Matching</option>
-              <option>Unable to Verify</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="blockStampNumber">Observed Block Stamp/Casting #</label>
-            <input id="blockStampNumber" placeholder="Observed engine block number/casting">
-          </div>
-          <div class="field">
-            <label for="originalBlockStampNumber">Original Block Stamp/Casting #</label>
-            <input id="originalBlockStampNumber" placeholder="Factory-correct block number/casting">
-          </div>
-          <div class="field">
-            <label for="headsStampNumber">Observed Heads Stamp/Casting #</label>
-            <input id="headsStampNumber" placeholder="Observed cylinder head numbers/codes">
-          </div>
-          <div class="field">
-            <label for="originalHeadsStampNumber">Original Heads Stamp/Casting #</label>
-            <input id="originalHeadsStampNumber" placeholder="Factory-correct head numbers/codes">
-          </div>
-          <div class="field">
-            <label for="transStampNumber">Observed Transmission Stamp/Casting #</label>
-            <input id="transStampNumber" placeholder="Observed transmission ID/casting code">
-          </div>
-          <div class="field">
-            <label for="originalTransStampNumber">Original Transmission Stamp/Casting #</label>
-            <input id="originalTransStampNumber" placeholder="Factory-correct transmission ID/casting">
-          </div>
-          <div class="field">
             <label for="drivetrain">Drivetrain</label>
             <input id="drivetrain" placeholder="RWD / AWD / FWD">
           </div>
@@ -778,6 +708,84 @@
         <div style="margin-top:12px;">
           <h3 style="margin:0 0 8px; font-size:1rem; color:#0f172a; font-family:'Montserrat','Roboto',Arial,sans-serif;">Detailed Checkpoints</h3>
           <div class="tiny" style="margin-bottom:8px;">Each checkpoint stores a status and notes so you can capture full inspection detail.</div>
+
+          <div class="checkpoint-section" style="margin-bottom:10px;">
+            <h3>Engine &amp; Transmission Numbers</h3>
+            <div class="tiny" style="margin-bottom:10px;">Use this section to record originality and casting/stamp verification in one place.</div>
+            <div class="grid">
+              <div class="field">
+                <label for="engineType">Current Engine</label>
+                <input id="engineType" placeholder="Chevrolet 350 / 383 V8">
+              </div>
+              <div class="field">
+                <label for="originalEngineType">Original Engine</label>
+                <input id="originalEngineType" placeholder="Factory engine spec/code">
+              </div>
+              <div class="field">
+                <label for="engineOriginality">Engine Originality</label>
+                <select id="engineOriginality">
+                  <option value="">Select</option>
+                  <option>Original</option>
+                  <option>Not Original</option>
+                  <option>Partially Original</option>
+                  <option>Unknown</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="transmissionType">Current Transmission</label>
+                <input id="transmissionType" placeholder="Automatic / Manual">
+              </div>
+              <div class="field">
+                <label for="originalTransmissionType">Original Transmission</label>
+                <input id="originalTransmissionType" placeholder="Factory transmission spec/code">
+              </div>
+              <div class="field">
+                <label for="transmissionOriginality">Transmission Originality</label>
+                <select id="transmissionOriginality">
+                  <option value="">Select</option>
+                  <option>Original</option>
+                  <option>Not Original</option>
+                  <option>Partially Original</option>
+                  <option>Unknown</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="numbersMatchClaim">Numbers Matching Verification</label>
+                <select id="numbersMatchClaim">
+                  <option value="">Select</option>
+                  <option>Yes - Numbers Matching</option>
+                  <option>Partial Match</option>
+                  <option>No - Not Numbers Matching</option>
+                  <option>Unable to Verify</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="blockStampNumber">Observed Block Stamp/Casting #</label>
+                <input id="blockStampNumber" placeholder="Observed engine block number/casting">
+              </div>
+              <div class="field">
+                <label for="originalBlockStampNumber">Original Block Stamp/Casting #</label>
+                <input id="originalBlockStampNumber" placeholder="Factory-correct block number/casting">
+              </div>
+              <div class="field">
+                <label for="headsStampNumber">Observed Heads Stamp/Casting #</label>
+                <input id="headsStampNumber" placeholder="Observed cylinder head numbers/codes">
+              </div>
+              <div class="field">
+                <label for="originalHeadsStampNumber">Original Heads Stamp/Casting #</label>
+                <input id="originalHeadsStampNumber" placeholder="Factory-correct head numbers/codes">
+              </div>
+              <div class="field">
+                <label for="transStampNumber">Observed Transmission Stamp/Casting #</label>
+                <input id="transStampNumber" placeholder="Observed transmission ID/casting code">
+              </div>
+              <div class="field">
+                <label for="originalTransStampNumber">Original Transmission Stamp/Casting #</label>
+                <input id="originalTransStampNumber" placeholder="Factory-correct transmission ID/casting">
+              </div>
+            </div>
+          </div>
+
           <div id="checkpointsContainer" class="checkpoints-wrap"></div>
         </div>
 
