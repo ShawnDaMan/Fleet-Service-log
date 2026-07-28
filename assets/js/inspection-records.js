@@ -127,10 +127,8 @@ const CHECKPOINT_SECTIONS = [
     title: 'Entry System',
     items: [
       { key: 'door_handles_present', label: 'Are door handles present?' },
-      { key: 'door_locks_work', label: 'Do door locks work with keys?' },
-      { key: 'door_actuators_work', label: 'Do electronic actuators release correctly?' },
-      { key: 'central_locking', label: 'Is central locking present and operational?' },
-      { key: 'windows_operate', label: 'Do windows operate correctly?' },
+      { key: 'door_locks_work', label: 'Do door latches/lock cylinders work with keys?' },
+      { key: 'windows_operate', label: 'Do manual/power windows and vent windows operate correctly?' },
       { key: 'hood_trunk_open', label: 'Do hood and trunk open/close correctly?' }
     ]
   },
@@ -476,7 +474,7 @@ function saveRecords() {
 }
 
 function getSpreadsheetHeaders() {
-  return [
+  const headers = [
     'Record ID',
     'Saved At',
     'Inspection Date',
@@ -530,6 +528,21 @@ function getSpreadsheetHeaders() {
     'Photo Links',
     ...getCheckpointSpreadsheetHeaders()
   ];
+
+  return makeHeadersUnique(headers);
+}
+
+function makeHeadersUnique(headers) {
+  const seen = new Map();
+
+  return headers.map(header => {
+    const key = (header || '').toString().trim();
+    const count = seen.get(key) || 0;
+    seen.set(key, count + 1);
+
+    if (count === 0) return key;
+    return `${key} (${count + 1})`;
+  });
 }
 
 function getCheckpointSpreadsheetHeaders() {
@@ -759,6 +772,12 @@ async function ensureSpreadsheetHeader(sheetTitle) {
     return;
   }
 
+  // Clear full header row first so removed columns do not linger from older schemas.
+  await gapi.client.sheets.spreadsheets.values.clear({
+    spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+    range: headerRange
+  });
+
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
     range: `${sheetTitle}!A1`,
@@ -794,6 +813,13 @@ async function appendRecordToSpreadsheet(record) {
 
   if (rowOffset >= 0) {
     const targetRow = rowOffset + 2;
+
+    // Clear full row first so old surplus columns are removed when schema gets trimmed.
+    await gapi.client.sheets.spreadsheets.values.clear({
+      spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+      range: `${sheetTitle}!A${targetRow}:ZZ${targetRow}`
+    });
+
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
       range: `${sheetTitle}!A${targetRow}:${lastCol}${targetRow}`,
