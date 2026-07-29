@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'fleet_inspection_records_v2';
+const ARCHIVE_STORAGE_KEY = 'fleet_inspection_archived_records_v1';
 
 const GOOGLE_SHEETS_SYNC_CONFIG = {
   apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
@@ -359,6 +360,7 @@ const els = {
   searchInput: document.getElementById('searchInput'),
   statusFilter: document.getElementById('statusFilter'),
   recordsTableBody: document.getElementById('recordsTableBody'),
+  archivedRecordsTableBody: document.getElementById('archivedRecordsTableBody'),
   totalReports: document.getElementById('totalReports'),
   passedReports: document.getElementById('passedReports'),
   attentionReports: document.getElementById('attentionReports'),
@@ -373,6 +375,7 @@ const els = {
 };
 
 let records = [];
+let archivedRecords = [];
 
 function escapeHtml(value) {
   return (value || '')
@@ -471,6 +474,40 @@ function readRecords() {
 
 function saveRecords() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+function readArchivedRecords() {
+  try {
+    const raw = localStorage.getItem(ARCHIVE_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('Failed to parse archived records from storage:', error);
+    return [];
+  }
+}
+
+function saveArchivedRecords() {
+  localStorage.setItem(ARCHIVE_STORAGE_KEY, JSON.stringify(archivedRecords));
+}
+
+function archiveRecordSnapshot(record, reason) {
+  if (!record || !record.id) return;
+  const snapshot = JSON.parse(JSON.stringify(record));
+  const archivedEntry = {
+    archiveId: `arch_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+    sourceRecordId: record.id,
+    vin: record.vin || '',
+    vehicle: record.vehicle || '',
+    inspectionDate: record.inspectionDate || '',
+    inspector: record.inspector || '',
+    reason: reason || 'update',
+    archivedAt: new Date().toISOString(),
+    snapshot
+  };
+  archivedRecords.unshift(archivedEntry);
+  saveArchivedRecords();
 }
 
 function getSpreadsheetHeaders() {
@@ -1840,6 +1877,34 @@ function renderTable() {
   renderStats();
 }
 
+function renderArchiveTable() {
+  if (!els.archivedRecordsTableBody) return;
+
+  if (!archivedRecords.length) {
+    els.archivedRecordsTableBody.innerHTML = '<tr><td colspan="6" class="tiny">No archived inspections yet.</td></tr>';
+    return;
+  }
+
+  const sorted = [...archivedRecords].sort((a, b) => (b.archivedAt || '').localeCompare(a.archivedAt || ''));
+  els.archivedRecordsTableBody.innerHTML = '';
+
+  sorted.forEach(entry => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${escapeHtml((entry.archivedAt || '').replace('T', ' ').slice(0, 19))}</td>
+      <td>${escapeHtml(entry.inspectionDate || '')}</td>
+      <td>${escapeHtml(entry.vehicle || '')}</td>
+      <td>${escapeHtml(entry.vin || '')}</td>
+      <td>${escapeHtml(entry.inspector || '')}</td>
+      <td class="row-actions">
+        <button type="button" data-archive-action="load" data-archive-id="${entry.archiveId}">Load</button>
+        <button type="button" data-archive-action="delete" data-archive-id="${entry.archiveId}">Delete</button>
+      </td>
+    `;
+    els.archivedRecordsTableBody.appendChild(row);
+  });
+}
+
 function exportJson() {
   const rows = records.map(toRepairRequestRow);
   if (!rows.length) {
@@ -2009,6 +2074,28 @@ function handleTableAction(event) {
   }
 }
 
+function handleArchiveTableAction(event) {
+  const btn = event.target.closest('button[data-archive-action]');
+  if (!btn) return;
+
+  const action = btn.dataset.archiveAction;
+  const archiveId = btn.dataset.archiveId;
+  const entry = archivedRecords.find(item => item.archiveId === archiveId);
+  if (!entry) return;
+
+  if (action === 'load') {
+    fillForm(entry.snapshot);
+    return;
+  }
+
+  if (action === 'delete') {
+    if (!confirm(`Delete archived inspection from ${entry.inspectionDate || 'unknown date'} for ${entry.vehicle || entry.vin || 'vehicle'}?`)) return;
+    archivedRecords = archivedRecords.filter(item => item.archiveId !== archiveId);
+    saveArchivedRecords();
+    renderArchiveTable();
+  }
+}
+
 function handleSubmit(event) {
   event.preventDefault();
 
@@ -2046,6 +2133,7 @@ function handleSubmit(event) {
   if (vinIndex >= 0) {
     // VIN is the unique key: overwrite existing inspection for that VIN.
     const existingByVin = records[vinIndex];
+    archiveRecordSnapshot(existingByVin, 'vin-overwrite');
     record.id = existingByVin.id;
     records[vinIndex] = record;
     localAction = 'updated';
@@ -2055,6 +2143,7 @@ function handleSubmit(event) {
       records.splice(editingIndex, 1);
     }
   } else if (editingIndex >= 0) {
+    archiveRecordSnapshot(records[editingIndex], 'manual-edit');
     records[editingIndex] = record;
     localAction = 'updated';
   } else {
@@ -2124,6 +2213,9 @@ function wireEvents() {
   els.statusFilter.addEventListener('change', renderTable);
 
   els.recordsTableBody.addEventListener('click', handleTableAction);
+  if (els.archivedRecordsTableBody) {
+    els.archivedRecordsTableBody.addEventListener('click', handleArchiveTableAction);
+  }
 
   // Keep scorecard and suggested status current as checkpoints are filled out.
   els.checkpointsContainer.addEventListener('input', renderScorecardFromForm);
@@ -2161,9 +2253,11 @@ function wireEvents() {
 function init() {
   renderCheckpoints();
   records = readRecords();
+  archivedRecords = readArchivedRecords();
   wireEvents();
   resetForm();
   renderTable();
+  renderArchiveTable();
 }
 
 init();

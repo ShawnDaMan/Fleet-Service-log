@@ -902,6 +902,26 @@
           </tbody>
         </table>
       </div>
+
+      <h3 style="margin:14px 0 8px; font-size:1rem; color:#0f172a; font-family:'Montserrat','Roboto',Arial,sans-serif;">Inspection History (Older Versions)</h3>
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Archived At</th>
+              <th>Inspection Date</th>
+              <th>Vehicle</th>
+              <th>VIN</th>
+              <th>Inspector</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="archivedRecordsTableBody">
+            <tr><td colspan="6" class="tiny">No archived inspections yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <div class="tiny" style="margin-top:8px;">VIN is the unique key. New VINs append as new rows; saving an existing VIN overwrites that vehicle inspection row in the single Google Sheet tab named Inspection Records. Records are also saved in this browser on this device.</div>
     </section>
   </div>
