@@ -626,7 +626,7 @@
       <div class="hero-content">
         <div class="hero-copy">
           <h1>Inspection Records</h1>
-          <p>Create inspection records, keep them on this device, search them instantly, and export backups whenever you want.</p>
+          <p>Create inspection records, sync them to the centralized Google Sheet, and review/update prior inspections from one shared record source.</p>
         </div>
         <div class="hero-meatball" aria-label="Racing number">6</div>
       </div>
@@ -642,6 +642,16 @@
     <section class="panel form-panel">
       <h2>New Inspection</h2>
       <form id="inspectionForm">
+        <div class="grid" style="margin-bottom:10px;">
+          <div class="field span-3">
+            <label for="recordPicker">Load Existing Record (Review/Update)</label>
+            <select id="recordPicker">
+              <option value="">Select Vehicle (Auto: Year + Make + Model)</option>
+            </select>
+            <div class="tiny" style="margin-top:6px;">Use this to load a previously saved inspection from the centralized sheet data.</div>
+          </div>
+        </div>
+
         <div class="grid">
           <div class="field">
             <label for="vehicle">Vehicle</label>
@@ -994,10 +1004,6 @@
       </div>
 
       <div class="actions" style="margin-top:0; margin-bottom:8px;">
-        <button class="export" type="button" id="exportJsonBtn">Export Records (Spreadsheet CSV)</button>
-        <button class="export" type="button" id="importSheetBtn">Import from Google Sheet</button>
-        <label class="file-btn export" for="importJsonInput">Import Records (Spreadsheet CSV)</label>
-        <input class="file-input" id="importJsonInput" type="file" accept="text/csv,.csv">
         <button class="delete" type="button" id="clearAllBtn">Delete All Records</button>
       </div>
 

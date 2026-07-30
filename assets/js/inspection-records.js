@@ -362,6 +362,7 @@ const els = {
   clearCheckpointsBtn: document.getElementById('clearCheckpointsBtn'),
   clearNotesBtn: document.getElementById('clearNotesBtn'),
   clearAllFormBtn: document.getElementById('clearAllFormBtn'),
+  recordPicker: document.getElementById('recordPicker'),
   searchInput: document.getElementById('searchInput'),
   statusFilter: document.getElementById('statusFilter'),
   recordsTableBody: document.getElementById('recordsTableBody'),
@@ -373,9 +374,6 @@ const els = {
   fillTemplateBtn: document.getElementById('fillTemplateBtn'),
   resetFormBtn: document.getElementById('resetFormBtn'),
   printCurrentBtn: document.getElementById('printCurrentBtn'),
-  exportJsonBtn: document.getElementById('exportJsonBtn'),
-  importSheetBtn: document.getElementById('importSheetBtn'),
-  importJsonInput: document.getElementById('importJsonInput'),
   clearAllBtn: document.getElementById('clearAllBtn')
 };
 
@@ -1535,6 +1533,9 @@ function fillForm(record) {
   els.summaryNotes.value = record.summaryNotes || '';
   els.photoLinks.value = (record.photoLinks || []).join('\n');
   renderScorecardFromForm();
+  if (els.recordPicker && record.id) {
+    els.recordPicker.value = record.id;
+  }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1993,6 +1994,7 @@ function renderStats() {
 
 function renderTable() {
   const list = filteredRecords();
+  renderRecordPicker();
 
   if (list.length === 0) {
     els.recordsTableBody.innerHTML = '<tr><td colspan="6" class="tiny">No matching records.</td></tr>';
@@ -2021,6 +2023,42 @@ function renderTable() {
   });
 
   renderStats();
+}
+
+function recordDisplayLabel(record) {
+  const vehicle = (record.vehicle || composeVehicleFromParts(record.details?.year, record.details?.make, record.details?.model) || '').trim();
+  const vin = (record.vin || '').trim();
+  const date = (record.inspectionDate || '').trim();
+  const inspector = (record.inspector || '').trim();
+  const chunks = [vehicle || 'Unknown Vehicle'];
+  if (vin) chunks.push(`VIN ${vin}`);
+  if (date) chunks.push(date);
+  if (inspector) chunks.push(inspector);
+  return chunks.join(' | ');
+}
+
+function renderRecordPicker() {
+  if (!els.recordPicker) return;
+
+  const currentId = els.editingId?.value || '';
+  const sorted = [...records].sort((a, b) => {
+    const vehicleA = (a.vehicle || '').toLowerCase();
+    const vehicleB = (b.vehicle || '').toLowerCase();
+    if (vehicleA !== vehicleB) return vehicleA.localeCompare(vehicleB);
+    return (b.inspectionDate || '').localeCompare(a.inspectionDate || '');
+  });
+
+  els.recordPicker.innerHTML = '<option value="">Select Vehicle (Auto: Year + Make + Model)</option>';
+
+  sorted.forEach(record => {
+    const option = document.createElement('option');
+    option.value = record.id;
+    option.textContent = recordDisplayLabel(record);
+    if (currentId && record.id === currentId) {
+      option.selected = true;
+    }
+    els.recordPicker.appendChild(option);
+  });
 }
 
 function renderArchiveTable() {
@@ -2216,7 +2254,9 @@ function buildCheckpointDataFromSheetRow(getValue) {
   return checkpointData;
 }
 
-async function importRecordsFromGoogleSheet() {
+async function importRecordsFromGoogleSheet(options = {}) {
+  const silent = Boolean(options.silent);
+
   try {
     await ensureAccessToken();
     const sheetTitle = await createOrVerifySpreadsheetTab();
@@ -2358,10 +2398,16 @@ async function importRecordsFromGoogleSheet() {
     saveRecords();
     renderTable();
     renderArchiveTable();
-    alert(`Google Sheet import complete. Created: ${created}, Updated: ${updated}, Skipped: ${skipped}.`);
+    if (!silent) {
+      alert(`Google Sheet import complete. Created: ${created}, Updated: ${updated}, Skipped: ${skipped}.`);
+    }
   } catch (error) {
     console.error('Google Sheet import failed:', error);
-    alert(`Could not import from Google Sheet. ${describeGoogleApiError(error)}`);
+    if (!silent) {
+      alert(`Could not import from Google Sheet. ${describeGoogleApiError(error)}`);
+    } else if (!records.length) {
+      alert(`Google Sheet sign-in/import is required to load centralized records. ${describeGoogleApiError(error)}`);
+    }
   }
 }
 
@@ -2549,11 +2595,14 @@ function wireEvents() {
   els.autoStatusToggle.addEventListener('change', renderScorecardFromForm);
   els.overallStatus.addEventListener('change', renderScorecardFromForm);
 
-  els.exportJsonBtn.addEventListener('click', exportJson);
-  if (els.importSheetBtn) {
-    els.importSheetBtn.addEventListener('click', importRecordsFromGoogleSheet);
+  if (els.recordPicker) {
+    els.recordPicker.addEventListener('change', () => {
+      const selectedId = els.recordPicker.value;
+      if (!selectedId) return;
+      const match = records.find(r => r.id === selectedId);
+      if (match) fillForm(match);
+    });
   }
-  els.importJsonInput.addEventListener('change', e => importJsonFile(e.target.files[0]));
 
   els.clearAllBtn.addEventListener('click', () => {
     if (!records.length) return;
@@ -2584,6 +2633,9 @@ function init() {
   resetForm();
   renderTable();
   renderArchiveTable();
+
+  // Pull centralized sheet data on page load so local and online users see the same records.
+  importRecordsFromGoogleSheet({ silent: true });
 }
 
 init();
