@@ -1885,15 +1885,32 @@ function printRecord(record) {
       <head>
         <title>Inspection Report - ${escapeHtml(record.vehicle)}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 18px; color: #111827; }
-          h1 { margin-bottom: 6px; }
-          .meta { margin-bottom: 14px; color: #374151; line-height: 1.5; }
-          .meta-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; }
+          @page { margin: 0.55in; }
+          body { font-family: Arial, sans-serif; padding: 0; color: #111827; font-size: 12px; }
+          h1 { margin: 0 0 8px; }
+          .meta { margin-bottom: 12px; color: #1f2937; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; }
+          .meta-grid { display: block; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; }
+          .meta > div,
+          .meta-grid > div {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 8px;
+            align-items: start;
+            min-height: 24px;
+            padding: 6px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            line-height: 1.35;
+            box-sizing: border-box;
+          }
+          .meta > div:last-child,
+          .meta-grid > div:last-child { border-bottom: none; }
+          .meta > div > strong,
+          .meta-grid > div > strong { display: block; color: #111827; }
           .section { border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-          .title { font-weight: 700; margin-bottom: 6px; }
+          .title { font-weight: 700; margin-bottom: 8px; }
           .notes { white-space: pre-wrap; }
-          .subtable { width: 100%; border-collapse: collapse; }
-          .subtable th, .subtable td { border-bottom: 1px solid #e5e7eb; padding: 6px; text-align: left; font-size: 12px; vertical-align: top; }
+          .subtable { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          .subtable th, .subtable td { border: 1px solid #d1d5db; padding: 6px; text-align: left; font-size: 12px; vertical-align: top; }
           .subtable th { background: #f3f4f6; }
         </style>
       </head>

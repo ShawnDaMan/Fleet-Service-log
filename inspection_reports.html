@@ -612,6 +612,10 @@
       .hero-content { flex-direction: column; align-items: flex-start; }
       .hero-meatball { width: 74px; height: 74px; font-size: 1.7rem; }
     }
+
+    @media print {
+      .records-panel { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -985,7 +989,7 @@
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel records-panel">
       <h2>Records</h2>
       <div class="grid" style="margin-bottom:10px;">
         <div class="field span-2">
