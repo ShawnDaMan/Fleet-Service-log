@@ -14,12 +14,15 @@
       --ink: #1f2933;
       --muted: #6b7280;
       --surface: #ffffff;
-      --brand: #0f766e;
-      --brand-2: #0ea5e9;
+      --brand: #0c4a6e;
+      --brand-2: #7ec7e8;
       --warn: #d97706;
       --danger: #dc2626;
       --ok: #16a34a;
       --line: #dbe2ea;
+      --gulf-blue: #7ec7e8;
+      --gulf-orange: #f47c20;
+      --gulf-navy: #0f355a;
     }
 
     body {
@@ -28,9 +31,9 @@
       font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
       color: var(--ink);
       background:
-        radial-gradient(circle at 15% 20%, rgba(14, 165, 233, 0.2), transparent 35%),
-        radial-gradient(circle at 80% 10%, rgba(15, 118, 110, 0.25), transparent 40%),
-        linear-gradient(180deg, #f7fbfc 0%, #eef5f7 100%);
+        radial-gradient(circle at 15% 20%, rgba(126, 199, 232, 0.3), transparent 35%),
+        radial-gradient(circle at 80% 10%, rgba(244, 124, 32, 0.2), transparent 40%),
+        linear-gradient(180deg, #f7fbff 0%, #edf5fb 100%);
       position: relative;
     }
 
@@ -57,23 +60,76 @@
       font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
     }
 
-    .btn-home { background: #0f766e; }
-    .btn-readiness { background: #2563eb; }
-    .btn-charts { background: #d97706; }
+    .btn-home { background: var(--gulf-navy); }
+    .btn-readiness { background: #1e5f98; }
+    .btn-charts { background: var(--gulf-orange); }
 
     .hero {
-      background: linear-gradient(135deg, #0f766e 0%, #0ea5e9 100%);
-      color: white;
+      position: relative;
+      overflow: hidden;
+      background: var(--gulf-blue);
+      color: var(--gulf-navy);
       border-radius: 16px;
       padding: 26px 22px;
-      box-shadow: 0 14px 24px rgba(15, 118, 110, 0.2);
+      box-shadow: 0 14px 24px rgba(15, 53, 90, 0.18);
       margin-bottom: 20px;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 96px;
+      background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0.9) 0,
+        rgba(255, 255, 255, 0.9) 10px,
+        var(--gulf-orange) 10px,
+        var(--gulf-orange) 86px,
+        rgba(255, 255, 255, 0.9) 86px,
+        rgba(255, 255, 255, 0.9) 96px
+      );
+      opacity: 0.95;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .hero-copy {
+      max-width: 760px;
+    }
+
+    .hero-meatball {
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      border: 4px solid rgba(15, 53, 90, 0.9);
+      background: #ffffff;
+      color: var(--gulf-navy);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+      font-size: 2rem;
+      font-weight: 900;
+      box-shadow: 0 6px 14px rgba(15, 53, 90, 0.2);
+      flex: 0 0 auto;
     }
 
     .hero h1 {
       margin: 0;
       text-align: left;
-      color: white;
+      color: var(--gulf-navy);
       font-size: 2rem;
       font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
       text-shadow: none;
@@ -83,7 +139,8 @@
 
     .hero p {
       margin: 10px 0 0;
-      opacity: 0.95;
+      opacity: 1;
+      color: #113a61;
       max-width: 760px;
     }
 
@@ -124,6 +181,41 @@
       margin-bottom: 16px;
     }
 
+    .form-panel {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .form-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 16% 14%, rgba(126, 199, 232, 0.24), transparent 34%),
+        radial-gradient(circle at 86% 12%, rgba(244, 124, 32, 0.18), transparent 30%),
+        linear-gradient(
+          90deg,
+          transparent 0,
+          transparent 39%,
+          rgba(255, 255, 255, 0.55) 39%,
+          rgba(255, 255, 255, 0.55) 40.5%,
+          rgba(244, 124, 32, 0.34) 40.5%,
+          rgba(244, 124, 32, 0.34) 59.5%,
+          rgba(255, 255, 255, 0.55) 59.5%,
+          rgba(255, 255, 255, 0.55) 61%,
+          transparent 61%,
+          transparent 100%
+        );
+      opacity: 0.2;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .form-panel > * {
+      position: relative;
+      z-index: 1;
+    }
+
     .panel h2 {
       text-align: left;
       margin: 0 0 12px;
@@ -143,6 +235,14 @@
       gap: 5px;
     }
 
+    .advanced-field {
+      display: none;
+    }
+
+    #detailsGrid.show-advanced .advanced-field {
+      display: flex;
+    }
+
     .field label {
       font-size: 0.86rem;
       color: #334155;
@@ -155,7 +255,7 @@
       width: 100%;
       border: 1px solid #cbd5e1;
       border-radius: 8px;
-      background: #fbfdff;
+      background: #ffffff;
       padding: 9px 10px;
       font-size: 0.95rem;
       font-family: 'Roboto', 'Montserrat', Arial, sans-serif;
@@ -509,6 +609,8 @@
       .grid { grid-template-columns: 1fr; }
       .span-2, .span-3 { grid-column: span 1; }
       .hero h1 { font-size: 1.6rem; }
+      .hero-content { flex-direction: column; align-items: flex-start; }
+      .hero-meatball { width: 74px; height: 74px; font-size: 1.7rem; }
     }
   </style>
 </head>
@@ -518,12 +620,16 @@
       <a class="btn-home" href="index.html">Service Log</a>
       <a class="btn-readiness" href="vehicle_readiness.html">Vehicle Readiness</a>
       <a class="btn-charts" href="fleet_service_charts.html">Charts</a>
-      <a class="btn-charts" href="repair_request_dump.html">Repair Request Dump</a>
     </div>
 
     <section class="hero">
-      <h1>Inspection Records</h1>
-      <p>Create inspection records, keep them on this device, search them instantly, and export backups whenever you want.</p>
+      <div class="hero-content">
+        <div class="hero-copy">
+          <h1>Inspection Records</h1>
+          <p>Create inspection records, keep them on this device, search them instantly, and export backups whenever you want.</p>
+        </div>
+        <div class="hero-meatball" aria-label="Racing number">6</div>
+      </div>
     </section>
 
     <section class="stats">
@@ -533,7 +639,7 @@
       <div class="stat"><div class="label">Not Ready</div><div id="failedReports" class="value">0</div></div>
     </section>
 
-    <section class="panel">
+    <section class="panel form-panel">
       <h2>New Inspection</h2>
       <form id="inspectionForm">
         <div class="grid">
@@ -581,7 +687,11 @@
           </div>
         </div>
 
-        <div class="grid" style="margin-top:12px;">
+        <div class="actions" style="margin-top:10px; margin-bottom:0;">
+          <button class="clear" id="toggleAdvancedFieldsBtn" type="button">Show Advanced Fields</button>
+        </div>
+
+        <div id="detailsGrid" class="grid" style="margin-top:12px;">
           <div class="field">
             <label for="year">Year</label>
             <input id="year" placeholder="1965">
@@ -594,7 +704,7 @@
             <label for="model">Model</label>
             <input id="model" placeholder="Cobra Replica">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="trim">Trim</label>
             <input id="trim" placeholder="Optional">
           </div>
@@ -602,11 +712,11 @@
             <label for="paintColor">Paint Color</label>
             <input id="paintColor" placeholder="Blue / White Stripes">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="originalPaintColor">Original Paint Color</label>
             <input id="originalPaintColor" placeholder="Factory color if known">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="paintOriginality">Paint Originality</label>
             <select id="paintOriginality">
               <option value="">Select</option>
@@ -620,11 +730,11 @@
             <label for="interiorColor">Interior Color</label>
             <input id="interiorColor" placeholder="Black">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="originalInteriorColor">Original Interior Color</label>
             <input id="originalInteriorColor" placeholder="Factory interior color if known">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="interiorOriginality">Interior Originality</label>
             <select id="interiorOriginality">
               <option value="">Select</option>
@@ -638,15 +748,15 @@
             <label for="drivetrain">Drivetrain</label>
             <input id="drivetrain" placeholder="RWD / AWD / FWD">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="inspectionLocation">Inspection Location</label>
             <input id="inspectionLocation" placeholder="Shop, lot, etc.">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="weather">Weather</label>
             <input id="weather" placeholder="Dry / Rain / Hot / Cold">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="titleStatus">Title Status</label>
             <select id="titleStatus">
               <option value="">Select</option>
@@ -657,15 +767,15 @@
               <option>Other</option>
             </select>
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="sellerName">Seller / Owner</label>
             <input id="sellerName" placeholder="Name">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="sellerContact">Seller Contact</label>
             <input id="sellerContact" placeholder="Phone or email">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="drivenBy">Road Test Driven By</label>
             <select id="drivenBy">
               <option value="">Select</option>
@@ -674,11 +784,11 @@
               <option>Not Driven</option>
             </select>
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="testMiles">Road Test Distance (miles)</label>
             <input id="testMiles" type="number" min="0" step="0.1" placeholder="2.0">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="docsAvailable">Records/Documents Available</label>
             <select id="docsAvailable">
               <option value="">Select</option>
@@ -687,7 +797,7 @@
               <option>No</option>
             </select>
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="immediateSafety">Immediate Safety Concern</label>
             <select id="immediateSafety">
               <option value="">Select</option>
@@ -695,11 +805,11 @@
               <option>Yes</option>
             </select>
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="repairEstimate">Estimated Repair Cost</label>
             <input id="repairEstimate" type="number" min="0" step="0.01" placeholder="0.00">
           </div>
-          <div class="field">
+          <div class="field advanced-field">
             <label for="nextServiceDate">Next Service Date</label>
             <input id="nextServiceDate" type="date">
           </div>
@@ -878,7 +988,6 @@
       </div>
 
       <div class="actions" style="margin-top:0; margin-bottom:8px;">
-        <button class="export" type="button" id="createSheetTabBtn">Create/Verify Sheet Tab</button>
         <button class="export" type="button" id="exportJsonBtn">Export Records (Spreadsheet CSV)</button>
         <label class="file-btn export" for="importJsonInput">Import Records (Spreadsheet CSV)</label>
         <input class="file-input" id="importJsonInput" type="file" accept="text/csv,.csv">
@@ -904,6 +1013,7 @@
       </div>
 
       <h3 style="margin:14px 0 8px; font-size:1rem; color:#0f172a; font-family:'Montserrat','Roboto',Arial,sans-serif;">Inspection History (Older Versions)</h3>
+      <div class="tiny" style="margin-bottom:8px;">Seeing the same VIN here is expected: these are archived previous versions after an overwrite.</div>
       <div style="overflow:auto;">
         <table>
           <thead>

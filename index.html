@@ -16,7 +16,6 @@
       .nav-btn.charts { background: #2980b9; }
       .nav-btn.key { background: #e67e22; }
       .nav-btn.inspect { background: #0f766e; }
-      .nav-btn.dump { background: #7c3aed; }
       .nav-btn.museum { background: #8e44ad; margin-right: 0; }
       h1 {
         text-align: center;
@@ -64,15 +63,13 @@
 <body>
   <!-- Main page title -->
   <h1>Fleet Service Log</h1>
-  
-  </div>
+
   <!-- Navigation links to other pages -->
   <div style="text-align: center; margin: 20px auto;">
     <a href="vehicle_readiness.html" class="nav-btn vehicle">🚗 Vehicle Readiness</a>
     <a href="fleet_service_charts.html" class="nav-btn charts">📊 View Charts</a>
     <a href="key_list.html" class="nav-btn key">🔑 Key List</a>
     <a href="inspection_reports.html" class="nav-btn inspect">🧾 Inspection Records</a>
-    <a href="repair_request_dump.html" class="nav-btn dump">🗂️ Repair Request Dump</a>
     <a href="museum_cars.html" class="nav-btn museum">🏛️ Museum Car Upkeep</a>
   </div>
   <!-- Sign-in notification and buttons -->
@@ -219,13 +216,6 @@
     </div>
   </div>
 
-      <tr>
-        <th>Vehicle ID</th>
-        <th>Total Cost (USD)</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
   <!-- Move script to end of body for proper DOM loading -->
     <script>
       // Paging logic for service table

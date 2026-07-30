@@ -302,6 +302,8 @@ const els = {
   inspector: document.getElementById('inspector'),
   overallStatus: document.getElementById('overallStatus'),
   scoringProfile: document.getElementById('scoringProfile'),
+  detailsGrid: document.getElementById('detailsGrid'),
+  toggleAdvancedFieldsBtn: document.getElementById('toggleAdvancedFieldsBtn'),
   year: document.getElementById('year'),
   make: document.getElementById('make'),
   model: document.getElementById('model'),
@@ -368,7 +370,6 @@ const els = {
   fillTemplateBtn: document.getElementById('fillTemplateBtn'),
   resetFormBtn: document.getElementById('resetFormBtn'),
   printCurrentBtn: document.getElementById('printCurrentBtn'),
-  createSheetTabBtn: document.getElementById('createSheetTabBtn'),
   exportJsonBtn: document.getElementById('exportJsonBtn'),
   importJsonInput: document.getElementById('importJsonInput'),
   clearAllBtn: document.getElementById('clearAllBtn')
@@ -400,6 +401,10 @@ function normalizeVin(value) {
   return (value || '').toString().trim().toUpperCase();
 }
 
+function vinMatchKey(value) {
+  return normalizeVin(value).replace(/[^A-Z0-9]/g, '');
+}
+
 function composeVehicleFromParts(year, make, model) {
   return [year, make, model]
     .map(part => (part || '').toString().trim())
@@ -412,6 +417,12 @@ function composeVehicleFromParts(year, make, model) {
 function syncVehicleFromParts() {
   const composed = composeVehicleFromParts(els.year.value, els.make.value, els.model.value);
   els.vehicle.value = composed;
+}
+
+function setAdvancedFieldsVisibility(isVisible) {
+  if (!els.detailsGrid || !els.toggleAdvancedFieldsBtn) return;
+  els.detailsGrid.classList.toggle('show-advanced', Boolean(isVisible));
+  els.toggleAdvancedFieldsBtn.textContent = isVisible ? 'Hide Advanced Fields' : 'Show Advanced Fields';
 }
 
 function statusClass(status) {
@@ -508,6 +519,38 @@ function archiveRecordSnapshot(record, reason) {
   };
   archivedRecords.unshift(archivedEntry);
   saveArchivedRecords();
+}
+
+function toMillis(value) {
+  const ms = Date.parse((value || '').toString());
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function dedupeRecordsByVin(list) {
+  const byVin = new Map();
+  const duplicates = [];
+
+  list.forEach(record => {
+    const key = vinMatchKey(record?.vin) || `id:${record?.id || Math.random()}`;
+    const existing = byVin.get(key);
+
+    if (!existing) {
+      byVin.set(key, record);
+      return;
+    }
+
+    const existingTs = Math.max(toMillis(existing.updatedAt), toMillis(existing.inspectionDate));
+    const currentTs = Math.max(toMillis(record.updatedAt), toMillis(record.inspectionDate));
+
+    if (currentTs >= existingTs) {
+      duplicates.push(existing);
+      byVin.set(key, record);
+    } else {
+      duplicates.push(record);
+    }
+  });
+
+  return { records: Array.from(byVin.values()), duplicates };
 }
 
 function getSpreadsheetHeaders() {
@@ -829,8 +872,9 @@ async function appendRecordToSpreadsheet(record) {
   await ensureAccessToken();
   const sheetTitle = await createOrVerifySpreadsheetTab();
   const vin = normalizeVin(record.vin);
+  const vinKey = vinMatchKey(vin);
 
-  if (!vin) {
+  if (!vinKey) {
     throw new Error('VIN is required for spreadsheet sync.');
   }
 
@@ -846,7 +890,7 @@ async function appendRecordToSpreadsheet(record) {
   });
 
   const vinRows = vinRead.result?.values || [];
-  const rowOffset = vinRows.findIndex(r => normalizeVin(r?.[0]) === vin);
+  const rowOffset = vinRows.findIndex(r => vinMatchKey(r?.[0]) === vinKey);
 
   if (rowOffset >= 0) {
     const targetRow = rowOffset + 2;
@@ -1542,18 +1586,18 @@ function clearSummaryAndPhotos() {
 
 function fillTemplateData() {
   const now = new Date();
-  const stamp = String(now.getTime()).slice(-6);
 
   els.editingId.value = '';
   els.scoringProfile.value = 'dealer';
   els.year.value = '1969';
-  els.make.value = 'Chevrolet';
-  els.model.value = 'Camaro';
+  els.make.value = 'Template';
+  els.model.value = 'Test Car';
   els.trim.value = 'SS';
   syncVehicleFromParts();
 
-  els.vin.value = `TESTVIN${stamp}`;
-  els.stockNumber.value = stamp.slice(0, 5).padStart(5, '0');
+  // Keep a stable VIN for quick overwrite/retest cycles.
+  els.vin.value = 'TESTVINDEMO001';
+  els.stockNumber.value = '99999';
   els.mileage.value = '45210';
   els.inspectionDate.value = now.toISOString().slice(0, 10);
   els.inspector.value = 'Template Tester';
@@ -1572,12 +1616,12 @@ function fillTemplateData() {
   els.originalTransmissionType.value = '4-Speed Manual';
   els.transmissionOriginality.value = 'Original';
   els.numbersMatchClaim.value = 'Yes - Numbers Matching';
-  els.blockStampNumber.value = `OBS-BLK-${stamp}`;
-  els.originalBlockStampNumber.value = `ORG-BLK-${stamp}`;
-  els.headsStampNumber.value = `OBS-HDS-${stamp}`;
-  els.originalHeadsStampNumber.value = `ORG-HDS-${stamp}`;
-  els.transStampNumber.value = `OBS-TRN-${stamp}`;
-  els.originalTransStampNumber.value = `ORG-TRN-${stamp}`;
+  els.blockStampNumber.value = 'OBS-BLK-TEMPLATE';
+  els.originalBlockStampNumber.value = 'ORG-BLK-TEMPLATE';
+  els.headsStampNumber.value = 'OBS-HDS-TEMPLATE';
+  els.originalHeadsStampNumber.value = 'ORG-HDS-TEMPLATE';
+  els.transStampNumber.value = 'OBS-TRN-TEMPLATE';
+  els.originalTransStampNumber.value = 'ORG-TRN-TEMPLATE';
 
   els.drivetrain.value = 'RWD';
   els.inspectionLocation.value = 'Main Shop Bay 1';
@@ -1591,10 +1635,10 @@ function fillTemplateData() {
   els.immediateSafety.value = 'No';
   els.repairEstimate.value = '1250';
   els.nextServiceDate.value = now.toISOString().slice(0, 10);
-  els.summaryNotes.value = 'Template test record: baseline inspection data for workflow validation.';
+  els.summaryNotes.value = 'TEMPLATE_RECORD baseline inspection data for workflow validation. Search key: TEMPLATE_DEMO.';
   els.photoLinks.value = 'https://example.com/photo1\nhttps://example.com/photo2';
 
-  CHECKPOINT_SECTIONS.forEach((section, sectionIndex) => {
+  CHECKPOINT_SECTIONS.forEach(section => {
     section.items.forEach((item, itemIndex) => {
       const statusEl = document.getElementById(checkpointStatusId(section.key, item.key));
       const notesEl = document.getElementById(checkpointNotesId(section.key, item.key));
@@ -2125,7 +2169,8 @@ function handleSubmit(event) {
   renderScorecardFromForm();
   const record = buildRecordFromForm();
   const currentVin = normalizeVin(record.vin);
-  const vinIndex = records.findIndex(r => normalizeVin(r.vin) === currentVin);
+  const currentVinKey = vinMatchKey(currentVin);
+  const vinIndex = records.findIndex(r => vinMatchKey(r.vin) === currentVinKey);
   const editingIndex = records.findIndex(r => r.id === record.id);
 
   let localAction = 'created';
@@ -2156,6 +2201,7 @@ function handleSubmit(event) {
 
   saveRecords();
   renderTable();
+  renderArchiveTable();
 
   appendRecordToSpreadsheet(record)
     .then(syncAction => {
@@ -2187,6 +2233,12 @@ function wireEvents() {
   els.stockNumber.addEventListener('input', () => {
     els.stockNumber.value = (els.stockNumber.value || '').replace(/\D/g, '').slice(0, 5);
   });
+  if (els.toggleAdvancedFieldsBtn) {
+    els.toggleAdvancedFieldsBtn.addEventListener('click', () => {
+      const currentlyVisible = els.detailsGrid?.classList.contains('show-advanced');
+      setAdvancedFieldsVisibility(!currentlyVisible);
+    });
+  }
   if (els.fillTemplateBtn) {
     els.fillTemplateBtn.addEventListener('click', () => {
       fillTemplateData();
@@ -2224,18 +2276,6 @@ function wireEvents() {
   els.autoStatusToggle.addEventListener('change', renderScorecardFromForm);
   els.overallStatus.addEventListener('change', renderScorecardFromForm);
 
-  if (els.createSheetTabBtn) {
-    els.createSheetTabBtn.addEventListener('click', async () => {
-      try {
-        const sheetTitle = await createOrVerifySpreadsheetTab();
-        alert(`Spreadsheet tab ready: ${sheetTitle}. New inspections will append as new rows in this single tab.`);
-      } catch (error) {
-        console.error('Create/verify spreadsheet tab failed:', error);
-        alert('Could not create/verify spreadsheet tab. Please sign in with Google and try again.');
-      }
-    });
-  }
-
   els.exportJsonBtn.addEventListener('click', exportJson);
   els.importJsonInput.addEventListener('change', e => importJsonFile(e.target.files[0]));
 
@@ -2252,9 +2292,19 @@ function wireEvents() {
 
 function init() {
   renderCheckpoints();
-  records = readRecords();
   archivedRecords = readArchivedRecords();
+  records = readRecords();
+
+  // One-time local cleanup: collapse duplicate VIN entries and archive older copies.
+  const dedupe = dedupeRecordsByVin(records);
+  if (dedupe.duplicates.length) {
+    dedupe.duplicates.forEach(dup => archiveRecordSnapshot(dup, 'vin-dedupe-cleanup'));
+    records = dedupe.records;
+    saveRecords();
+  }
+
   wireEvents();
+  setAdvancedFieldsVisibility(false);
   resetForm();
   renderTable();
   renderArchiveTable();
