@@ -712,6 +712,11 @@
             <label for="paintColor">Paint Color</label>
             <input id="paintColor" placeholder="Blue / White Stripes">
           </div>
+          <div class="field">
+            <label for="paintScore">Paint Score (1-10)</label>
+            <input id="paintScore" type="number" min="1" max="10" step="1" placeholder="1 = needs paint, 10 = award winner">
+            <div class="tiny" style="margin-top:-1px;">1 = needs paint / visible dents. 10 = near-impossible concours-level finish.</div>
+          </div>
           <div class="field advanced-field">
             <label for="originalPaintColor">Original Paint Color</label>
             <input id="originalPaintColor" placeholder="Factory color if known">
@@ -916,7 +921,8 @@
             <div class="score-pill"><div class="k">Fail</div><div class="v" id="scoreFailCount">0</div></div>
             <div class="score-pill"><div class="k">Not Checked</div><div class="v" id="scoreNotCheckedCount">0</div></div>
             <div class="score-pill"><div class="k">Completion</div><div class="v" id="scoreCompletionCount">0%</div></div>
-            <div class="score-pill"><div class="k">Weighted Quality</div><div class="v" id="scoreQualityScore">0%</div></div>
+            <div class="score-pill"><div class="k">Overall Score</div><div class="v" id="scoreQualityScore">0%</div></div>
+            <div class="score-pill"><div class="k">Overall Grade</div><div class="v" id="scoreOverallGrade">N/A</div></div>
             <div class="score-pill"><div class="k">Quality Tier</div><div class="v" id="scoreQualityTierWrap"><span id="scoreQualityTier" class="quality-tier tier-unverified">Unverified</span></div></div>
           </div>
 
@@ -989,6 +995,7 @@
 
       <div class="actions" style="margin-top:0; margin-bottom:8px;">
         <button class="export" type="button" id="exportJsonBtn">Export Records (Spreadsheet CSV)</button>
+        <button class="export" type="button" id="importSheetBtn">Import from Google Sheet</button>
         <label class="file-btn export" for="importJsonInput">Import Records (Spreadsheet CSV)</label>
         <input class="file-input" id="importJsonInput" type="file" accept="text/csv,.csv">
         <button class="delete" type="button" id="clearAllBtn">Delete All Records</button>

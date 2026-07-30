@@ -309,6 +309,7 @@ const els = {
   model: document.getElementById('model'),
   trim: document.getElementById('trim'),
   paintColor: document.getElementById('paintColor'),
+  paintScore: document.getElementById('paintScore'),
   originalPaintColor: document.getElementById('originalPaintColor'),
   paintOriginality: document.getElementById('paintOriginality'),
   interiorColor: document.getElementById('interiorColor'),
@@ -353,6 +354,7 @@ const els = {
   scoreNotCheckedCount: document.getElementById('scoreNotCheckedCount'),
   scoreCompletionCount: document.getElementById('scoreCompletionCount'),
   scoreQualityScore: document.getElementById('scoreQualityScore'),
+  scoreOverallGrade: document.getElementById('scoreOverallGrade'),
   scoreQualityTier: document.getElementById('scoreQualityTier'),
   sectionScoreTableBody: document.getElementById('sectionScoreTableBody'),
   clearVehicleDetailsBtn: document.getElementById('clearVehicleDetailsBtn'),
@@ -371,6 +373,7 @@ const els = {
   resetFormBtn: document.getElementById('resetFormBtn'),
   printCurrentBtn: document.getElementById('printCurrentBtn'),
   exportJsonBtn: document.getElementById('exportJsonBtn'),
+  importSheetBtn: document.getElementById('importSheetBtn'),
   importJsonInput: document.getElementById('importJsonInput'),
   clearAllBtn: document.getElementById('clearAllBtn')
 };
@@ -574,6 +577,7 @@ function getSpreadsheetHeaders() {
     'Model',
     'Trim',
     'Current Paint',
+    'Paint Score',
     'Original Paint',
     'Paint Originality',
     'Current Interior',
@@ -673,6 +677,7 @@ function toSpreadsheetRow(record) {
     d.model || '',
     d.trim || '',
     d.paintColor || '',
+    d.paintScore || '',
     d.originalPaintColor || '',
     d.paintOriginality || '',
     d.interiorColor || '',
@@ -933,6 +938,15 @@ function getProfileConfig(profileKey) {
   return SCORING_PROFILES[profileKey] || SCORING_PROFILES.dealer;
 }
 
+function resolveProfileKey(value) {
+  const normalized = normalizeText(value);
+  if (!normalized) return 'dealer';
+  if (SCORING_PROFILES[normalized]) return normalized;
+
+  const byLabel = Object.entries(SCORING_PROFILES).find(([, config]) => normalizeText(config.label) === normalized);
+  return byLabel ? byLabel[0] : 'dealer';
+}
+
 function getActiveProfileConfig() {
   return getProfileConfig(getActiveProfileKey());
 }
@@ -947,7 +961,33 @@ function toPercent(value) {
   return `${Math.round(value)}%`;
 }
 
-function calculateScorecard(checkpoints, profileConfig) {
+function overallGradeFromScore(score) {
+  const value = Number(score);
+  if (!Number.isFinite(value)) return 'N/A';
+  if (value >= 97) return 'A+';
+  if (value >= 93) return 'A';
+  if (value >= 90) return 'A-';
+  if (value >= 87) return 'B+';
+  if (value >= 83) return 'B';
+  if (value >= 80) return 'B-';
+  if (value >= 77) return 'C+';
+  if (value >= 73) return 'C';
+  if (value >= 70) return 'C-';
+  if (value >= 65) return 'D';
+  return 'F';
+}
+
+function normalizePaintScore(value) {
+  const numeric = Number.parseFloat((value || '').toString().trim());
+  if (!Number.isFinite(numeric)) return null;
+  return Math.min(10, Math.max(1, numeric));
+}
+
+function getPaintScoreWeight(profileConfig) {
+  return Math.max(4, Math.round(getSectionWeight('paint_finish', profileConfig) * 0.75));
+}
+
+function calculateScorecard(checkpoints, profileConfig, paintScoreValue) {
   const overall = {
     pass: 0,
     attention: 0,
@@ -962,6 +1002,9 @@ function calculateScorecard(checkpoints, profileConfig) {
     weightedQualityPct: 0,
     weightedEarned: 0,
     weightedMax: 0,
+    paintScore: null,
+    paintScorePct: null,
+    paintScoreWeight: 0,
     qualityTier: 'Unverified'
   };
 
@@ -1046,6 +1089,18 @@ function calculateScorecard(checkpoints, profileConfig) {
     sections.push(sectionTotals);
   });
 
+  const paintScore = normalizePaintScore(paintScoreValue);
+  if (paintScore !== null) {
+    const paintScorePct = ((paintScore - 1) / 9) * 100;
+    const paintWeight = getPaintScoreWeight(profileConfig);
+
+    overall.paintScore = paintScore;
+    overall.paintScorePct = paintScorePct;
+    overall.paintScoreWeight = paintWeight;
+    overall.weightedMax += paintWeight;
+    overall.weightedEarned += paintWeight * (paintScorePct / 100);
+  }
+
   overall.completionPct = overall.applicable > 0
     ? (overall.checked / overall.applicable) * 100
     : 0;
@@ -1057,6 +1112,8 @@ function calculateScorecard(checkpoints, profileConfig) {
   overall.weightedQualityPct = overall.weightedMax > 0
     ? (overall.weightedEarned / overall.weightedMax) * 100
     : 0;
+
+  overall.grade = overallGradeFromScore(overall.weightedQualityPct);
 
   overall.qualityTier = qualityTierFromScore(overall.weightedQualityPct, overall.completionPct, profileConfig);
 
@@ -1161,7 +1218,7 @@ function renderScorecardFromForm() {
   const profileKey = getActiveProfileKey();
   const profileConfig = getActiveProfileConfig();
   const checkpoints = collectCheckpointsFromForm();
-  const scorecard = calculateScorecard(checkpoints, profileConfig);
+  const scorecard = calculateScorecard(checkpoints, profileConfig, els.paintScore.value);
   const suggested = suggestOverallStatus(scorecard, profileConfig);
 
   els.scorePassCount.textContent = scorecard.overall.pass;
@@ -1170,6 +1227,10 @@ function renderScorecardFromForm() {
   els.scoreNotCheckedCount.textContent = scorecard.overall.notChecked;
   els.scoreCompletionCount.textContent = toPercent(scorecard.overall.completionPct);
   els.scoreQualityScore.textContent = toPercent(scorecard.overall.weightedQualityPct);
+  els.scoreQualityScore.title = `Overall Grade: ${scorecard.overall.grade}`;
+  if (els.scoreOverallGrade) {
+    els.scoreOverallGrade.textContent = scorecard.overall.grade;
+  }
   els.scoreQualityTier.textContent = scorecard.overall.qualityTier;
   els.scoreQualityTier.className = `quality-tier ${qualityTierClass(scorecard.overall.qualityTier)}`;
 
@@ -1273,7 +1334,7 @@ function buildRecordFromForm() {
   const profileConfig = getProfileConfig(profileKey);
 
   const checkpoints = collectCheckpointsFromForm();
-  const scorecard = calculateScorecard(checkpoints, profileConfig);
+  const scorecard = calculateScorecard(checkpoints, profileConfig, els.paintScore.value);
   const suggested = suggestOverallStatus(scorecard, profileConfig);
   const numbersMatchingResult = deriveNumbersMatchingResult();
 
@@ -1293,6 +1354,7 @@ function buildRecordFromForm() {
       model: els.model.value.trim(),
       trim: els.trim.value.trim(),
       paintColor: els.paintColor.value.trim(),
+      paintScore: els.paintScore.value.trim(),
       originalPaintColor: els.originalPaintColor.value.trim(),
       paintOriginality: els.paintOriginality.value,
       interiorColor: els.interiorColor.value.trim(),
@@ -1333,9 +1395,13 @@ function buildRecordFromForm() {
       suggestedStatus: suggested.status,
       suggestedRule: suggested.rule,
       numbersMatchingResult,
+      paintScore: scorecard.overall.paintScore,
+      paintScorePct: scorecard.overall.paintScorePct,
+      paintScoreWeight: scorecard.overall.paintScoreWeight,
       completionPct: scorecard.overall.completionPct,
       qualityPct: scorecard.overall.qualityPct,
       weightedQualityPct: scorecard.overall.weightedQualityPct,
+      overallGrade: scorecard.overall.grade,
       qualityTier: scorecard.overall.qualityTier,
       pass: scorecard.overall.pass,
       attention: scorecard.overall.attention,
@@ -1396,6 +1462,7 @@ function fillForm(record) {
   els.model.value = record.details?.model || '';
   els.trim.value = record.details?.trim || '';
   els.paintColor.value = record.details?.paintColor || '';
+  els.paintScore.value = record.details?.paintScore || '';
   els.originalPaintColor.value = record.details?.originalPaintColor || '';
   els.paintOriginality.value = record.details?.paintOriginality || '';
   els.interiorColor.value = record.details?.interiorColor || '';
@@ -1549,6 +1616,7 @@ function clearVehicleAndHeaderFields() {
   const ids = [
     'vehicle', 'vin', 'stockNumber', 'mileage', 'inspectionDate', 'inspector', 'overallStatus',
     'year', 'make', 'model', 'trim', 'paintColor', 'originalPaintColor', 'paintOriginality',
+    'paintScore',
     'interiorColor', 'originalInteriorColor', 'interiorOriginality',
     'engineType', 'originalEngineType', 'engineOriginality',
     'transmissionType', 'originalTransmissionType', 'transmissionOriginality',
@@ -1604,6 +1672,7 @@ function fillTemplateData() {
   els.overallStatus.value = 'Needs Attention';
 
   els.paintColor.value = 'Blue';
+  els.paintScore.value = '8';
   els.originalPaintColor.value = 'Blue';
   els.paintOriginality.value = 'Original';
   els.interiorColor.value = 'Black';
@@ -1703,6 +1772,7 @@ function filteredRecords() {
         record.details?.transStampNumber,
         record.details?.originalTransStampNumber,
         record.details?.paintColor,
+        record.details?.paintScore,
         record.details?.originalPaintColor,
         record.details?.paintOriginality,
         record.details?.interiorColor,
@@ -1765,13 +1835,14 @@ function printRecord(record) {
   const checkpointMarkup = renderCheckpointPrintSections(record);
   const recordProfileKey = record.scoringProfile || record.scoreSnapshot?.profileKey || 'dealer';
   const recordProfileConfig = getProfileConfig(recordProfileKey);
-  const derivedScore = calculateScorecard(record.checkpoints || {}, recordProfileConfig).overall;
+  const derivedScore = calculateScorecard(record.checkpoints || {}, recordProfileConfig, record.details?.paintScore).overall;
   const score = record.scoreSnapshot || {
     suggestedStatus: suggestOverallStatus({ overall: derivedScore, sections: [] }, recordProfileConfig).status,
     profileLabel: recordProfileConfig.label,
     completionPct: derivedScore.completionPct,
     qualityPct: derivedScore.qualityPct,
     weightedQualityPct: derivedScore.weightedQualityPct,
+    overallGrade: derivedScore.grade,
     qualityTier: derivedScore.qualityTier,
     pass: derivedScore.pass,
     attention: derivedScore.attention,
@@ -1816,6 +1887,7 @@ function printRecord(record) {
             <div><strong>Model:</strong> ${escapeHtml(d.model)}</div>
             <div><strong>Trim:</strong> ${escapeHtml(d.trim)}</div>
             <div><strong>Current Paint:</strong> ${escapeHtml(d.paintColor)}</div>
+            <div><strong>Paint Score:</strong> ${escapeHtml(d.paintScore)}</div>
             <div><strong>Original Paint:</strong> ${escapeHtml(d.originalPaintColor)}</div>
             <div><strong>Paint Originality:</strong> ${escapeHtml(d.paintOriginality)}</div>
             <div><strong>Current Interior:</strong> ${escapeHtml(d.interiorColor)}</div>
@@ -1856,6 +1928,7 @@ function printRecord(record) {
             <div><strong>Suggested Status:</strong> ${escapeHtml(score.suggestedStatus)}</div>
             <div><strong>Completion:</strong> ${toPercent(score.completionPct || 0)}</div>
             <div><strong>Weighted Quality:</strong> ${toPercent(score.weightedQualityPct || score.qualityPct || 0)}</div>
+            <div><strong>Overall Grade:</strong> ${escapeHtml(score.overallGrade || overallGradeFromScore(score.weightedQualityPct || score.qualityPct || 0))}</div>
             <div><strong>Quality Tier:</strong> ${escapeHtml(score.qualityTier || 'Unverified')}</div>
             <div><strong>Pass:</strong> ${escapeHtml(score.pass)}</div>
             <div><strong>Needs Attention:</strong> ${escapeHtml(score.attention)}</div>
@@ -2021,6 +2094,7 @@ function importJsonFile(file) {
             model: '',
             trim: '',
             paintColor: get('Current Paint'),
+            paintScore: get('Paint Score'),
             originalPaintColor: get('Original Paint'),
             paintOriginality: get('Paint Originality'),
             interiorColor: get('Current Interior'),
@@ -2090,6 +2164,176 @@ function importJsonFile(file) {
 
   reader.readAsText(file);
   els.importJsonInput.value = '';
+}
+
+function buildCheckpointDataFromSheetRow(getValue) {
+  const checkpointData = {};
+
+  CHECKPOINT_SECTIONS.forEach(section => {
+    const sectionData = {};
+    section.items.forEach(item => {
+      const base = `${section.title} - ${item.label}`;
+      const rawStatus = getValue(`${base} Status`) || 'Not Checked';
+      const status = CHECKPOINT_STATUS_OPTIONS.includes(rawStatus) ? rawStatus : 'Not Checked';
+      sectionData[item.key] = {
+        label: item.label,
+        status,
+        notes: getValue(`${base} Notes`) || ''
+      };
+    });
+    checkpointData[section.key] = sectionData;
+  });
+
+  return checkpointData;
+}
+
+async function importRecordsFromGoogleSheet() {
+  try {
+    await ensureAccessToken();
+    const sheetTitle = await createOrVerifySpreadsheetTab();
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+      range: `${sheetTitle}!A1:ZZ`
+    });
+
+    const rows = response.result?.values || [];
+    if (rows.length < 2) {
+      alert('Google Sheet has no inspection rows to import.');
+      return;
+    }
+
+    const headers = rows[0].map(h => normalizeText(h));
+    const dataRows = rows.slice(1);
+    const nowIso = new Date().toISOString();
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    const getFromRow = (row, name) => {
+      const i = headers.indexOf(normalizeText(name));
+      return i >= 0 ? (row[i] || '').toString().trim() : '';
+    };
+
+    dataRows.forEach((row, idx) => {
+      if (!row || !row.length) {
+        skipped += 1;
+        return;
+      }
+
+      const vin = normalizeVin(getFromRow(row, 'VIN'));
+      const vinKey = vinMatchKey(vin);
+      if (!vinKey) {
+        skipped += 1;
+        return;
+      }
+
+      const profileKey = resolveProfileKey(getFromRow(row, 'Scoring Profile'));
+      const profileConfig = getProfileConfig(profileKey);
+      const checkpoints = buildCheckpointDataFromSheetRow(name => getFromRow(row, name));
+      const details = {
+        year: getFromRow(row, 'Year'),
+        make: getFromRow(row, 'Make'),
+        model: getFromRow(row, 'Model'),
+        trim: getFromRow(row, 'Trim'),
+        paintColor: getFromRow(row, 'Current Paint'),
+        paintScore: getFromRow(row, 'Paint Score'),
+        originalPaintColor: getFromRow(row, 'Original Paint'),
+        paintOriginality: getFromRow(row, 'Paint Originality'),
+        interiorColor: getFromRow(row, 'Current Interior'),
+        originalInteriorColor: getFromRow(row, 'Original Interior'),
+        interiorOriginality: getFromRow(row, 'Interior Originality'),
+        engineType: getFromRow(row, 'Current Engine'),
+        originalEngineType: getFromRow(row, 'Original Engine'),
+        engineOriginality: getFromRow(row, 'Engine Originality'),
+        transmissionType: getFromRow(row, 'Current Transmission'),
+        originalTransmissionType: getFromRow(row, 'Original Transmission'),
+        transmissionOriginality: getFromRow(row, 'Transmission Originality'),
+        numbersMatchClaim: getFromRow(row, 'Numbers Matching Verification'),
+        blockStampNumber: getFromRow(row, 'Observed Block Stamp/Casting #'),
+        originalBlockStampNumber: getFromRow(row, 'Original Block Stamp/Casting #'),
+        headsStampNumber: getFromRow(row, 'Observed Heads Stamp/Casting #'),
+        originalHeadsStampNumber: getFromRow(row, 'Original Heads Stamp/Casting #'),
+        transStampNumber: getFromRow(row, 'Observed Transmission Stamp/Casting #'),
+        originalTransStampNumber: getFromRow(row, 'Original Transmission Stamp/Casting #'),
+        numbersMatchingResult: getFromRow(row, 'Numbers Matching Result') || 'Unknown',
+        drivetrain: getFromRow(row, 'Drivetrain'),
+        inspectionLocation: getFromRow(row, 'Inspection Location'),
+        weather: getFromRow(row, 'Weather'),
+        titleStatus: getFromRow(row, 'Title Status'),
+        sellerName: getFromRow(row, 'Seller Name'),
+        sellerContact: getFromRow(row, 'Seller Contact'),
+        drivenBy: getFromRow(row, 'Road Test Driven By'),
+        testMiles: getFromRow(row, 'Road Test Miles'),
+        docsAvailable: getFromRow(row, 'Docs Available'),
+        immediateSafety: getFromRow(row, 'Immediate Safety Concern'),
+        repairEstimate: getFromRow(row, 'Repair Estimate'),
+        nextServiceDate: getFromRow(row, 'Next Service Date')
+      };
+
+      const scorecard = calculateScorecard(checkpoints, profileConfig, details.paintScore);
+      const suggested = suggestOverallStatus(scorecard, profileConfig);
+      const incoming = {
+        id: getFromRow(row, 'Record ID') || `insp_sheet_${Date.now()}_${idx}`,
+        vehicle: getFromRow(row, 'Vehicle') || composeVehicleFromParts(details.year, details.make, details.model),
+        vin,
+        stockNumber: getFromRow(row, 'Stock Number').replace(/\D/g, '').slice(0, 5),
+        mileage: getFromRow(row, 'Mileage'),
+        inspectionDate: getFromRow(row, 'Inspection Date'),
+        inspector: getFromRow(row, 'Inspector'),
+        overallStatus: getFromRow(row, 'Overall Status') || suggested.status,
+        scoringProfile: profileKey,
+        details,
+        checkpoints,
+        autoStatusEnabled: true,
+        scoreSnapshot: {
+          profileKey,
+          profileLabel: profileConfig.label,
+          suggestedStatus: getFromRow(row, 'Suggested Status') || suggested.status,
+          suggestedRule: suggested.rule,
+          numbersMatchingResult: details.numbersMatchingResult,
+          paintScore: scorecard.overall.paintScore,
+          paintScorePct: scorecard.overall.paintScorePct,
+          paintScoreWeight: scorecard.overall.paintScoreWeight,
+          completionPct: scorecard.overall.completionPct,
+          qualityPct: scorecard.overall.qualityPct,
+          weightedQualityPct: scorecard.overall.weightedQualityPct,
+          overallGrade: scorecard.overall.grade,
+          qualityTier: scorecard.overall.qualityTier,
+          pass: scorecard.overall.pass,
+          attention: scorecard.overall.attention,
+          fail: scorecard.overall.fail,
+          notChecked: scorecard.overall.notChecked
+        },
+        summaryNotes: getFromRow(row, 'Summary Notes'),
+        photoLinks: (getFromRow(row, 'Photo Links') || '')
+          .split('|')
+          .map(part => part.trim())
+          .filter(Boolean),
+        updatedAt: getFromRow(row, 'Saved At') || nowIso,
+        sheetSyncedAt: nowIso
+      };
+
+      const existingIndex = records.findIndex(r => vinMatchKey(r.vin) === vinKey);
+      if (existingIndex >= 0) {
+        const existing = records[existingIndex];
+        archiveRecordSnapshot(existing, 'sheet-import-overwrite');
+        incoming.id = existing.id;
+        records[existingIndex] = incoming;
+        updated += 1;
+      } else {
+        records.push(incoming);
+        created += 1;
+      }
+    });
+
+    saveRecords();
+    renderTable();
+    renderArchiveTable();
+    alert(`Google Sheet import complete. Created: ${created}, Updated: ${updated}, Skipped: ${skipped}.`);
+  } catch (error) {
+    console.error('Google Sheet import failed:', error);
+    alert('Could not import from Google Sheet. Make sure you complete Google sign-in and that the Inspection Records tab has headers.');
+  }
 }
 
 function handleTableAction(event) {
@@ -2277,6 +2521,9 @@ function wireEvents() {
   els.overallStatus.addEventListener('change', renderScorecardFromForm);
 
   els.exportJsonBtn.addEventListener('click', exportJson);
+  if (els.importSheetBtn) {
+    els.importSheetBtn.addEventListener('click', importRecordsFromGoogleSheet);
+  }
   els.importJsonInput.addEventListener('change', e => importJsonFile(e.target.files[0]));
 
   els.clearAllBtn.addEventListener('click', () => {
