@@ -5,6 +5,7 @@ const GOOGLE_SHEETS_SYNC_CONFIG = {
   apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
   clientId: '798228996956-klknfdqcehur1i4utmdvuug4pnesf1rh.apps.googleusercontent.com',
   spreadsheetId: '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk',
+  targetSheetId: 1693362281,
   targetSheetTitle: 'Inspection Records',
   discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
   scope: 'https://www.googleapis.com/auth/spreadsheets'
@@ -765,6 +766,10 @@ async function initGoogleClientIfNeeded() {
 async function ensureAccessToken() {
   await initGoogleClientIfNeeded();
 
+  if (window?.location?.protocol === 'file:') {
+    throw new Error('Google sign-in does not work on file:// pages. Open this app with http://localhost (or your deployed HTTPS URL) and sign in there.');
+  }
+
   if (accessToken) return accessToken;
 
   if (!tokenClient) {
@@ -808,11 +813,25 @@ async function getTargetSheetTitle() {
   });
 
   const sheets = response.result?.sheets || [];
-  const target = sheets.find(s => (s?.properties?.title || '').trim() === GOOGLE_SHEETS_SYNC_CONFIG.targetSheetTitle);
+  const targetSheetId = Number(GOOGLE_SHEETS_SYNC_CONFIG.targetSheetId);
+  const byId = Number.isFinite(targetSheetId)
+    ? sheets.find(s => Number(s?.properties?.sheetId) === targetSheetId)
+    : null;
 
-  if (target) {
-    targetSheetTitleCache = target.properties.title;
+  if (byId?.properties?.title) {
+    targetSheetTitleCache = byId.properties.title;
     return targetSheetTitleCache;
+  }
+
+  const byTitle = sheets.find(s => (s?.properties?.title || '').trim() === GOOGLE_SHEETS_SYNC_CONFIG.targetSheetTitle);
+
+  if (byTitle) {
+    targetSheetTitleCache = byTitle.properties.title;
+    return targetSheetTitleCache;
+  }
+
+  if (Number.isFinite(targetSheetId)) {
+    throw new Error(`Configured sheet tab with gid ${targetSheetId} was not found in spreadsheet ${GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId}.`);
   }
 
   await gapi.client.sheets.spreadsheets.batchUpdate({
@@ -841,6 +860,16 @@ async function createOrVerifySpreadsheetTab() {
   const sheetTitle = await getTargetSheetTitle();
   await ensureSpreadsheetHeader(sheetTitle);
   return sheetTitle;
+}
+
+function describeGoogleApiError(error) {
+  const message = error?.result?.error?.message || error?.message || 'Unknown Google API error.';
+  const code = error?.status || error?.result?.error?.code || '';
+  const status = error?.result?.error?.status || '';
+  const parts = [message];
+  if (code) parts.push(`code: ${code}`);
+  if (status) parts.push(`status: ${status}`);
+  return parts.join(' | ');
 }
 
 async function ensureSpreadsheetHeader(sheetTitle) {
@@ -2332,7 +2361,7 @@ async function importRecordsFromGoogleSheet() {
     alert(`Google Sheet import complete. Created: ${created}, Updated: ${updated}, Skipped: ${skipped}.`);
   } catch (error) {
     console.error('Google Sheet import failed:', error);
-    alert('Could not import from Google Sheet. Make sure you complete Google sign-in and that the Inspection Records tab has headers.');
+    alert(`Could not import from Google Sheet. ${describeGoogleApiError(error)}`);
   }
 }
 
@@ -2463,7 +2492,7 @@ function handleSubmit(event) {
     })
     .catch(error => {
       console.error('Spreadsheet sync failed:', error);
-      alert('Record saved locally, but Google Sheet sync failed. Sign in when prompted and try Save again.');
+      alert(`Record saved locally, but Google Sheet sync failed. ${describeGoogleApiError(error)}`);
     });
 }
 
