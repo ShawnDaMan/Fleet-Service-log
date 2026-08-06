@@ -724,12 +724,26 @@ function columnIndexToA1(colIndex) {
   return out || 'A';
 }
 
+function areGoogleApisReady() {
+  return typeof gapi !== 'undefined' && typeof google !== 'undefined' && Boolean(google.accounts?.oauth2);
+}
+
+async function waitForGoogleApis(timeoutMs = 12000, intervalMs = 150) {
+  if (areGoogleApisReady()) return;
+
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    await new Promise(resolve => setTimeout(resolve, intervalMs));
+    if (areGoogleApisReady()) return;
+  }
+
+  throw new Error('Google API scripts are not loaded on this page.');
+}
+
 async function initGoogleClientIfNeeded() {
   if (googleClientReady) return;
 
-  if (typeof gapi === 'undefined' || typeof google === 'undefined' || !google.accounts?.oauth2) {
-    throw new Error('Google API scripts are not loaded on this page.');
-  }
+  await waitForGoogleApis();
 
   await new Promise((resolve, reject) => {
     gapi.load('client', async () => {
