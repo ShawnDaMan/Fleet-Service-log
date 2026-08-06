@@ -16,6 +16,7 @@ let tokenClient = null;
 let accessToken = null;
 let targetSheetTitleCache = '';
 let googleScriptsRequested = false;
+let accessTokenRequestPromise = null;
 
 const CHECKPOINT_STATUS_OPTIONS = [
   'Pass',
@@ -805,7 +806,9 @@ async function initGoogleClientIfNeeded() {
   googleClientReady = true;
 }
 
-async function ensureAccessToken() {
+async function ensureAccessToken(options = {}) {
+  const interactive = options.interactive !== false;
+
   await initGoogleClientIfNeeded();
 
   if (window?.location?.protocol === 'file:') {
@@ -818,23 +821,31 @@ async function ensureAccessToken() {
     throw new Error('Google token client is not initialized.');
   }
 
-  accessToken = await new Promise((resolve, reject) => {
-    tokenClient.callback = response => {
-      if (response?.error) {
-        reject(new Error(response.error));
-        return;
-      }
-      if (!response?.access_token) {
-        reject(new Error('No access token returned by Google.'));
-        return;
-      }
+  if (!accessTokenRequestPromise) {
+    accessTokenRequestPromise = new Promise((resolve, reject) => {
+      tokenClient.callback = response => {
+        if (response?.error) {
+          reject(new Error(response.error));
+          return;
+        }
+        if (!response?.access_token) {
+          reject(new Error('No access token returned by Google.'));
+          return;
+        }
 
-      const token = response.access_token;
-      resolve(token);
-    };
+        const token = response.access_token;
+        resolve(token);
+      };
 
-    tokenClient.requestAccessToken({ prompt: 'consent' });
-  });
+      // Silent flow tries to reuse existing Google session without opening consent UI.
+      tokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+    })
+      .finally(() => {
+        accessTokenRequestPromise = null;
+      });
+  }
+
+  accessToken = await accessTokenRequestPromise;
 
   const expiryTime = Date.now() + (8 * 3600 * 1000);
   localStorage.setItem('google_access_token', accessToken);
@@ -2348,7 +2359,14 @@ async function importRecordsFromGoogleSheet(options = {}) {
     let usedPublicFallback = false;
 
     try {
-      await ensureAccessToken();
+      if (silent) {
+        await initGoogleClientIfNeeded();
+        if (!accessToken) {
+          throw new Error('No cached Google token for silent startup import.');
+        }
+      } else {
+        await ensureAccessToken({ interactive: true });
+      }
       const sheetTitle = await createOrVerifySpreadsheetTab();
       const response = await gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
