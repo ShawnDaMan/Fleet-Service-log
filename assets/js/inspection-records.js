@@ -914,6 +914,31 @@ function describeGoogleApiError(error) {
   return parts.join(' | ');
 }
 
+async function fetchRowsFromPublicSheet(rangeA1) {
+  const encodedRange = encodeURIComponent(rangeA1);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId}/values/${encodedRange}?key=${GOOGLE_SHEETS_SYNC_CONFIG.apiKey}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    let detail = '';
+    try {
+      const payload = await response.json();
+      detail = payload?.error?.message || '';
+    } catch (parseError) {
+      detail = '';
+    }
+
+    if (detail) {
+      throw new Error(`Public sheet read failed: ${detail}`);
+    }
+
+    throw new Error(`Public sheet read failed with HTTP ${response.status}.`);
+  }
+
+  const payload = await response.json();
+  return payload?.values || [];
+}
+
 async function ensureSpreadsheetHeader(sheetTitle) {
   const headerRange = `${sheetTitle}!1:1`;
   const existing = await gapi.client.sheets.spreadsheets.values.get({
@@ -2319,16 +2344,28 @@ async function importRecordsFromGoogleSheet(options = {}) {
   const silent = Boolean(options.silent);
 
   try {
-    await ensureAccessToken();
-    const sheetTitle = await createOrVerifySpreadsheetTab();
-    const response = await gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
-      range: `${sheetTitle}!A1:ZZ`
-    });
+    let rows = [];
+    let usedPublicFallback = false;
 
-    const rows = response.result?.values || [];
+    try {
+      await ensureAccessToken();
+      const sheetTitle = await createOrVerifySpreadsheetTab();
+      const response = await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: GOOGLE_SHEETS_SYNC_CONFIG.spreadsheetId,
+        range: `${sheetTitle}!A1:ZZ`
+      });
+      rows = response.result?.values || [];
+    } catch (authError) {
+      const fallbackRange = `${GOOGLE_SHEETS_SYNC_CONFIG.targetSheetTitle}!A1:ZZ`;
+      rows = await fetchRowsFromPublicSheet(fallbackRange);
+      usedPublicFallback = true;
+      console.warn('Authenticated Google import unavailable; loaded from public sheet view instead.', authError);
+    }
+
     if (rows.length < 2) {
-      alert('Google Sheet has no inspection rows to import.');
+      if (!silent) {
+        alert('Google Sheet has no inspection rows to import.');
+      }
       return;
     }
 
@@ -2460,14 +2497,18 @@ async function importRecordsFromGoogleSheet(options = {}) {
     renderTable();
     renderArchiveTable();
     if (!silent) {
-      alert(`Google Sheet import complete. Created: ${created}, Updated: ${updated}, Skipped: ${skipped}.`);
+      const modeNote = usedPublicFallback
+        ? ' Loaded through public sheet read access; sign in is still required for write-back sync.'
+        : '';
+      alert(`Google Sheet import complete. Created: ${created}, Updated: ${updated}, Skipped: ${skipped}.${modeNote}`);
     }
   } catch (error) {
     console.error('Google Sheet import failed:', error);
     if (!silent) {
       alert(`Could not import from Google Sheet. ${describeGoogleApiError(error)}`);
     } else if (!records.length) {
-      alert(`Google Sheet sign-in/import is required to load centralized records. ${describeGoogleApiError(error)}`);
+      // Do not block page initialization with a modal during background startup sync.
+      console.warn(`Google Sheet sign-in/import is required to load centralized records. ${describeGoogleApiError(error)}`);
     }
   }
 }
