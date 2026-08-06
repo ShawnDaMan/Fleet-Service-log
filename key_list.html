@@ -185,6 +185,9 @@
   </div>
 
   <script>
+    // ------------------------------
+    // Key Inventory Table Logic
+    // ------------------------------
     // Google Sheets Configuration for Key List
     const KEY_CONFIG = {
       apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
@@ -217,6 +220,7 @@
       }
     }
 
+    // Normalize incoming rows and store only the data region used by the table.
     function displayKeys(rows) {
       const tbody = document.getElementById('keyTableBody');
       
@@ -231,6 +235,7 @@
       renderTable();
     }
 
+    // Paint the current in-memory dataset into the DOM table body.
     function renderTable() {
       const tbody = document.getElementById('keyTableBody');
       tbody.innerHTML = '';
@@ -255,6 +260,7 @@
       }
     }
 
+    // Sort by clicked column, toggling between ascending and descending order.
     function sortTable(columnIndex) {
       // Clear previous sort indicators
       const headers = document.querySelectorAll('th');

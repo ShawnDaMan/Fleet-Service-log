@@ -95,6 +95,9 @@
     <p>This page is for Data use only. Records are maintained solely by the Brays Motor Museum Shop services.<br>(See Shawn Nicholson for any clarifications)</p>
   </footer>
   <script>
+    // ------------------------------
+    // Fleet Service Analytics Dashboard
+    // ------------------------------
     let allData = [];
     let allServiceTypes = [];
     let summaryCurrentFilter = 'All';
@@ -124,6 +127,7 @@
     // Map vehicle IDs to colors
     let vehicleColorMap = {};
 
+    // Bootstrap Google API client, load rows from Sheets, then render charts + summary table.
     async function fetchDataAndInit() {
       try {
         await new Promise((resolve, reject) => {
@@ -174,6 +178,7 @@
       }
     }
 
+    // Fill service type filter from loaded data and re-render when filter changes.
     function populateSummaryServiceTypeFilter() {
       const filter = document.getElementById('summaryServiceTypeFilter');
       filter.innerHTML = '<option value="All">All</option>';
@@ -192,6 +197,7 @@
       };
     }
 
+    // Render summary table and all Chart.js visualizations from the latest in-memory dataset.
     function renderChartsAndTable() {
       // Only update the summary table (filtered by summaryCurrentFilter)
       const summaryTable = document.querySelector('#summaryTable tbody');
@@ -225,7 +231,7 @@
       totalRow.style.color = '#fff';
       totalRow.innerHTML = `<td style="padding: 10px; border: 1px solid #1a5a8a;">TOTAL</td><td style="padding: 10px; text-align: right; border: 1px solid #1a5a8a;">$${totalCost.toFixed(2)}</td><td style="padding: 10px; text-align: right; border: 1px solid #1a5a8a;">${totalEntries}</td>`;
 
-      // --- RESTORE CHART.JS CHART RENDERING ---
+      // --- Chart 1: Total service costs by vehicle ---
       // Total Service Costs by Vehicle (Bar Chart)
       const allVehicleTotals = {};
       const allVehicleCount = {};
@@ -253,7 +259,7 @@
         options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
 
-      // Service Type Distribution (Pie Chart, total costs)
+      // --- Chart 2: Service type distribution by total cost ---
       const allServiceTypeTotals = {};
       allData.forEach(entry => {
         const type = entry.serviceType;
@@ -277,7 +283,7 @@
         options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
 
-      // Tires Cost Breakdown by Vehicle (Bar Chart)
+      // --- Chart 3: Tire-related spend by vehicle ---
       const allTiresFiltered = allData.filter(entry => entry.serviceType.toLowerCase().includes('tire'));
       const allTiresVehicleTotals = {};
       allTiresFiltered.forEach(entry => {
@@ -302,7 +308,7 @@
         options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
 
-      // Yearly Costs Trend (Line Chart, last 12 months, robust date parsing)
+      // --- Chart 4: Monthly cost trend (last 12 months) ---
       const allMonthlyTotals = {};
       allData.forEach(entry => {
         let month = '';
@@ -346,7 +352,7 @@
         data: costTrendChartData,
         options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
-      // --- END RESTORE CHART.JS CHART RENDERING ---
+      // --- End chart rendering ---
     }
 
 

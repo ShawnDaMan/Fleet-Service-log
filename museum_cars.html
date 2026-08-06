@@ -169,6 +169,9 @@
   </div>
 
   <script>
+    // ------------------------------
+    // Museum Fleet Table Logic
+    // ------------------------------
     // Google Sheets Configuration for Museum Cars
     const MUSEUM_CONFIG = {
       apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
@@ -201,6 +204,7 @@
       }
     }
 
+    // Normalize incoming rows and keep only the data section after sheet headers.
     function displayMuseumCars(rows) {
       const tbody = document.getElementById('museumTableBody');
       
@@ -215,6 +219,7 @@
       renderTable();
     }
 
+    // Paint the current in-memory dataset into the museum table body.
     function renderTable() {
       const tbody = document.getElementById('museumTableBody');
       tbody.innerHTML = '';
@@ -240,6 +245,7 @@
       }
     }
 
+    // Sort by clicked column, toggling between ascending and descending order.
     function sortTable(columnIndex) {
       // Clear previous sort indicators
       const headers = document.querySelectorAll('th');

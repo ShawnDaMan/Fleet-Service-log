@@ -392,6 +392,7 @@ function populateFilterVehicles() {
   });
 }
 
+// Applies active filter controls, updates visible-row totals, and resets paging to page 1.
 function applyFilters() {
   const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
   const vehicleFilter = document.getElementById('filterVehicleId').value;
@@ -447,6 +448,7 @@ function applyFilters() {
   }
 }
 
+// Clears all filter controls and restores full table visibility.
 function clearFilters() {
   document.getElementById('filterVehicleId').value = '';
   document.getElementById('filterDateFrom').value = '';
@@ -586,6 +588,7 @@ document.addEventListener('submit', function(e) {
 // ========================================
 // SECTION 5: EDIT/SAVE with Event Delegation
 // ========================================
+// Converts a display row into editable inputs for inline updates.
 function editRow(row) {
   if (!isAuthorizedUser) {
     alert('Only authorized users can edit data.');
@@ -606,6 +609,7 @@ function editRow(row) {
   editCell.appendChild(createSaveButton());
 }
 
+// Persists inline edits back into display cells and restores action buttons.
 function saveRow(row) {
   if (!isAuthorizedUser) {
     alert('Only authorized users can save data.');
@@ -626,6 +630,7 @@ function saveRow(row) {
   // saveTableToStorage(); // [LEGACY: Commented out]
 }
 
+// Removes a row after confirmation and re-numbers visible records.
 function deleteRow(row) {
   if (!isAuthorizedUser) {
     alert('Only authorized users can delete data.');
@@ -647,7 +652,7 @@ function deleteRow(row) {
   }
 }
 
-// Delegated event listener for Edit/Save/Delete buttons on the table
+// Delegated event listener for Edit/Save/Delete buttons on the table.
 document.getElementById('serviceTable').addEventListener('click', function(e) {
   if (e.target.classList.contains('edit-btn')) {
     const row = e.target.closest('tr');

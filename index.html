@@ -218,11 +218,15 @@
 
   <!-- Move script to end of body for proper DOM loading -->
     <script>
+      // ------------------------------
+      // Client-side Paging for Service Table
+      // ------------------------------
       // Paging logic for service table
       let currentPage = 1;
       const pageSize = 50;
       let allServiceRows = [];
 
+      // Wrap the table loader so paging is applied after Google Sheets rows are rendered.
       // Patch the table rendering to support paging
       const origLoadTableFromGoogleSheets = window.loadTableFromGoogleSheets;
       window.loadTableFromGoogleSheets = async function() {
@@ -252,6 +256,7 @@
         renderPagingControls();
       }
 
+      // Build simple Previous/Next controls based on the currently loaded row count.
       function renderPagingControls() {
         const totalRows = allServiceRows.length;
         const totalPages = Math.ceil(totalRows / pageSize);

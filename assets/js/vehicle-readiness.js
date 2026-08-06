@@ -1,3 +1,5 @@
+// Vehicle Readiness module:
+// Builds readiness cards/issues table from Google Sheets and supports issue/vehicle management.
 // Google Sheets Configuration for Vehicle Readiness
 const READINESS_CONFIG = {
   apiKey: 'AIzaSyCbwWuijHsYZbe7xObLhZdZrN5y215w1mk',
@@ -26,6 +28,9 @@ const VEHICLE_REGISTRY_SHEET = 'Vehicle Registry';
 const VEHICLE_REGISTRY_HEADERS = ['Year', 'Make', 'Model', 'Trim', 'VIN', 'Color', 'Active'];
 let vehicleRegistryRows = [];
 
+// ------------------------------
+// Vehicle Name/Key Helpers
+// ------------------------------
 function normalizeVehicleName(name) {
   return (name || '').trim().replace(/\s+/g, ' ');
 }
@@ -68,6 +73,9 @@ function vehicleRegistryRange(a1Range) {
   return `'${VEHICLE_REGISTRY_SHEET}'!${a1Range}`;
 }
 
+// ------------------------------
+// Vehicle Registry Sheet Helpers
+// ------------------------------
 async function ensureVehicleRegistrySheet() {
   const metadataResponse = await gapi.client.sheets.spreadsheets.get({
     spreadsheetId: READINESS_CONFIG.spreadsheetId,
@@ -181,6 +189,9 @@ function getDisplayVehiclesFromRegistry() {
   return Array.from(activeKeys).sort();
 }
 
+// ------------------------------
+// Google Auth + Client Initialization
+// ------------------------------
 // Initialize Google API
 function gapiLoaded() {
   gapi.load('client', initializeGapiClient);
@@ -285,6 +296,9 @@ function handleSignOut() {
   alert('You have been signed out.');
 }
 
+// ------------------------------
+// Data Loading + Readiness Aggregation
+// ------------------------------
 // Load readiness data from Google Sheets
 let isLoading = false;
 async function loadReadinessData() {
@@ -487,6 +501,9 @@ function displayReadinessCards(issuesByVehicle) {
   }
 }
 
+// ------------------------------
+// Issues Table + Pagination UI
+// ------------------------------
 function displayIssuesTable(rows) {
   try {
     const tbody = document.getElementById('issuesTableBody');
@@ -623,6 +640,9 @@ function previousPage() {
   }
 }
 
+// ------------------------------
+// Issue CRUD + Vehicle Status Updates
+// ------------------------------
 // Delete an issue row
 async function deleteIssue(rowIndex) {
   if (!accessToken) {
@@ -923,6 +943,9 @@ async function markAsReviewed(rowIndex) {
   }
 }
 
+// ------------------------------
+// Modal/Manager UI Helpers
+// ------------------------------
 // Modal functions
 function showAddIssueModal() {
   if (!accessToken) {
@@ -1145,6 +1168,9 @@ function populateVehicleDropdown(vehicles) {
   });
 }
 
+// ------------------------------
+// New Issue Submission + Script Bootstrap
+// ------------------------------
 async function submitNewIssue() {
   if (!accessToken) {
     alert('Please sign in with Google to submit issues.');

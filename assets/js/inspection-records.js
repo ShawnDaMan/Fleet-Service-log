@@ -1,3 +1,5 @@
+// Inspection Records module:
+// Manages the full inspection workflow, scoring engine, local storage, and Google Sheets sync.
 const STORAGE_KEY = 'fleet_inspection_records_v2';
 const ARCHIVE_STORAGE_KEY = 'fleet_inspection_archived_records_v1';
 
@@ -18,6 +20,7 @@ let targetSheetTitleCache = '';
 let googleScriptsRequested = false;
 let accessTokenRequestPromise = null;
 
+// Standardized options used for each checkpoint row in the inspection form.
 const CHECKPOINT_STATUS_OPTIONS = [
   'Pass',
   'Needs Attention',
@@ -42,6 +45,7 @@ const BASE_SECTION_WEIGHTS = {
   paperwork: 4
 };
 
+// Scoring profiles tune weights and thresholds for different inspection strictness modes.
 const SCORING_PROFILES = {
   concours: {
     label: 'Concours (Strict)',
@@ -125,6 +129,7 @@ const SCORING_PROFILES = {
   }
 };
 
+// Source-of-truth checklist model used by form rendering, scoring, and spreadsheet mapping.
 const CHECKPOINT_SECTIONS = [
   {
     key: 'entry_system',
@@ -294,6 +299,7 @@ const CHECKPOINT_SECTIONS = [
   }
 ];
 
+// Cached DOM references for fast, centralized UI interactions.
 const els = {
   form: document.getElementById('inspectionForm'),
   editingId: document.getElementById('editingId'),
@@ -384,6 +390,9 @@ const els = {
 let records = [];
 let archivedRecords = [];
 
+// ------------------------------
+// Utility Helpers
+// ------------------------------
 function escapeHtml(value) {
   return (value || '')
     .toString()
@@ -477,6 +486,9 @@ function checkpointNotesId(sectionKey, itemKey) {
   return `cp_${sectionKey}_${itemKey}_notes`;
 }
 
+// ------------------------------
+// Local Storage Persistence
+// ------------------------------
 function readRecords() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -559,6 +571,9 @@ function dedupeRecordsByVin(list) {
   return { records: Array.from(byVin.values()), duplicates };
 }
 
+// ------------------------------
+// Spreadsheet Schema + Row Mapping
+// ------------------------------
 function getSpreadsheetHeaders() {
   const headers = [
     'Record ID',
@@ -1037,6 +1052,9 @@ async function appendRecordToSpreadsheet(record) {
   return 'appended';
 }
 
+// ------------------------------
+// Scoring Engine
+// ------------------------------
 function getActiveProfileKey() {
   return els.scoringProfile?.value || 'dealer';
 }
@@ -1373,6 +1391,9 @@ function renderScorecardFromForm() {
   };
 }
 
+// ------------------------------
+// Checkpoint/Form Serialization
+// ------------------------------
 function renderCheckpoints() {
   const sectionsHtml = CHECKPOINT_SECTIONS.map(section => {
     const rows = section.items.map(item => {
@@ -1630,6 +1651,9 @@ function resetForm() {
   renderScorecardFromForm();
 }
 
+// ------------------------------
+// CSV Import/Export Utilities
+// ------------------------------
 function csvEscape(value) {
   const text = (value ?? '').toString();
   if (text.includes('"') || text.includes(',') || text.includes('\n') || text.includes('\r')) {
@@ -2330,6 +2354,9 @@ function importJsonFile(file) {
   els.importJsonInput.value = '';
 }
 
+// ------------------------------
+// Google Sheet Import Pipeline
+// ------------------------------
 function buildCheckpointDataFromSheetRow(getValue) {
   const checkpointData = {};
 
@@ -2531,6 +2558,9 @@ async function importRecordsFromGoogleSheet(options = {}) {
   }
 }
 
+// ------------------------------
+// Table Actions + Save Flow
+// ------------------------------
 function handleTableAction(event) {
   const btn = event.target.closest('button[data-action]');
   if (!btn) return;
@@ -2662,6 +2692,9 @@ function handleSubmit(event) {
     });
 }
 
+// ------------------------------
+// Event Wiring + Startup
+// ------------------------------
 function wireEvents() {
   els.form.addEventListener('submit', handleSubmit);
 
