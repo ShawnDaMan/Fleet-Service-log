@@ -15,6 +15,7 @@ let googleClientReady = false;
 let tokenClient = null;
 let accessToken = null;
 let targetSheetTitleCache = '';
+let googleScriptsRequested = false;
 
 const CHECKPOINT_STATUS_OPTIONS = [
   'Pass',
@@ -374,7 +375,9 @@ const els = {
   fillTemplateBtn: document.getElementById('fillTemplateBtn'),
   resetFormBtn: document.getElementById('resetFormBtn'),
   printCurrentBtn: document.getElementById('printCurrentBtn'),
-  clearAllBtn: document.getElementById('clearAllBtn')
+  clearAllBtn: document.getElementById('clearAllBtn'),
+  connectGoogleBtn: document.getElementById('connectGoogleBtn'),
+  reloadFromGoogleBtn: document.getElementById('reloadFromGoogleBtn')
 };
 
 let records = [];
@@ -728,8 +731,35 @@ function areGoogleApisReady() {
   return typeof gapi !== 'undefined' && typeof google !== 'undefined' && Boolean(google.accounts?.oauth2);
 }
 
+function requestGoogleApiScriptsIfMissing() {
+  if (googleScriptsRequested) return;
+
+  const hasGsiScript = Boolean(document.querySelector('script[src*="accounts.google.com/gsi/client"]'));
+  const hasApiScript = Boolean(document.querySelector('script[src*="apis.google.com/js/api.js"]'));
+
+  if (!hasGsiScript) {
+    const gsiScript = document.createElement('script');
+    gsiScript.src = 'https://accounts.google.com/gsi/client';
+    gsiScript.async = true;
+    gsiScript.defer = true;
+    document.head.appendChild(gsiScript);
+  }
+
+  if (!hasApiScript) {
+    const apiScript = document.createElement('script');
+    apiScript.src = 'https://apis.google.com/js/api.js';
+    apiScript.async = true;
+    apiScript.defer = true;
+    document.head.appendChild(apiScript);
+  }
+
+  googleScriptsRequested = true;
+}
+
 async function waitForGoogleApis(timeoutMs = 12000, intervalMs = 150) {
   if (areGoogleApisReady()) return;
+
+  requestGoogleApiScriptsIfMissing();
 
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -2593,6 +2623,26 @@ function wireEvents() {
     els.fillTemplateBtn.addEventListener('click', () => {
       fillTemplateData();
       alert('Template data loaded across all fields and checkpoint notes.');
+    });
+  }
+  if (els.connectGoogleBtn) {
+    els.connectGoogleBtn.addEventListener('click', async () => {
+      try {
+        await ensureAccessToken();
+        alert('Google Sheet connection is ready. You can now reload from centralized records or save records to sync.');
+      } catch (error) {
+        console.error('Google connection failed:', error);
+        alert(`Google sign-in failed. ${describeGoogleApiError(error)}`);
+      }
+    });
+  }
+  if (els.reloadFromGoogleBtn) {
+    els.reloadFromGoogleBtn.addEventListener('click', async () => {
+      try {
+        await importRecordsFromGoogleSheet({ silent: false });
+      } catch (error) {
+        console.error('Google import failed:', error);
+      }
     });
   }
   els.resetFormBtn.addEventListener('click', resetForm);
