@@ -236,7 +236,8 @@ function gisLoaded() {
     scope: READINESS_CONFIG.scope,
     callback: (response) => {
       accessToken = response.access_token;
-      const expiryTime = Date.now() + (8 * 3600 * 1000);
+      const expiresIn = Number(response.expires_in) || 3600;
+      const expiryTime = Date.now() + Math.max(expiresIn - 60, 60) * 1000;
       localStorage.setItem('google_access_token', accessToken);
       localStorage.setItem('google_token_expiry', expiryTime);
       gapi.client.setToken({access_token: accessToken});
@@ -252,7 +253,7 @@ function handleSignIn() {
     const checkInterval = setInterval(() => {
       if (tokenClient) {
         clearInterval(checkInterval);
-        tokenClient.requestAccessToken({prompt: 'consent'});
+        tokenClient.requestAccessToken({prompt: ''});
       }
     }, 100);
     setTimeout(() => {
@@ -262,7 +263,7 @@ function handleSignIn() {
       }
     }, 5000);
   } else {
-    tokenClient.requestAccessToken({prompt: 'consent'});
+    tokenClient.requestAccessToken({prompt: ''});
   }
 }
 

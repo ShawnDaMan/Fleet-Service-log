@@ -848,21 +848,24 @@ async function ensureAccessToken(options = {}) {
           return;
         }
 
-        const token = response.access_token;
-        resolve(token);
+        resolve({
+          token: response.access_token,
+          expiresIn: Number(response.expires_in) || 3600
+        });
       };
 
-      // Silent flow tries to reuse existing Google session without opening consent UI.
-      tokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+      // Reuse the existing grant; Google shows consent only when it is required.
+      tokenClient.requestAccessToken({ prompt: '' });
     })
       .finally(() => {
         accessTokenRequestPromise = null;
       });
   }
 
-  accessToken = await accessTokenRequestPromise;
+  const tokenResponse = await accessTokenRequestPromise;
+  accessToken = tokenResponse.token;
 
-  const expiryTime = Date.now() + (8 * 3600 * 1000);
+  const expiryTime = Date.now() + Math.max(tokenResponse.expiresIn - 60, 60) * 1000;
   localStorage.setItem('google_access_token', accessToken);
   localStorage.setItem('google_token_expiry', String(expiryTime));
   gapi.client.setToken({ access_token: accessToken });

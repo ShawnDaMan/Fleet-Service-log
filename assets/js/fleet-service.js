@@ -45,25 +45,32 @@ function initGoogleAPI() {
           apiKey: GOOGLE_SHEETS_CONFIG.apiKey,
           discoveryDocs: GOOGLE_SHEETS_CONFIG.discoveryDocs
         });
-        // Set up OAuth token client for sign-in
-        if (typeof google !== 'undefined' && google.accounts) {
-          tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_SHEETS_CONFIG.clientId,
-            scope: GOOGLE_SHEETS_CONFIG.scope,
-            callback: (response) => {
-              if (response.error) {
-                console.error('Token error:', response);
-                return;
-              }
-              accessToken = response.access_token;
-              const expiryTime = Date.now() + (8 * 3600 * 1000);
-              localStorage.setItem('google_access_token', accessToken);
-              localStorage.setItem('google_token_expiry', String(expiryTime));
-              gapi.client.setToken({access_token: accessToken});
-              updateSigninStatus(true); // Update UI for signed-in state
-            }
-          });
+        const startedAt = Date.now();
+        while ((typeof google === 'undefined' || !google.accounts?.oauth2) && Date.now() - startedAt < 10000) {
+          await new Promise(wait => setTimeout(wait, 100));
         }
+        if (typeof google === 'undefined' || !google.accounts?.oauth2) {
+          throw new Error('Google Identity Services not loaded');
+        }
+
+        // Set up OAuth token client for sign-in after both Google libraries are ready.
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_SHEETS_CONFIG.clientId,
+          scope: GOOGLE_SHEETS_CONFIG.scope,
+          callback: (response) => {
+            if (response.error) {
+              console.error('Token error:', response);
+              return;
+            }
+            accessToken = response.access_token;
+            const expiresIn = Number(response.expires_in) || 3600;
+            const expiryTime = Date.now() + Math.max(expiresIn - 60, 60) * 1000;
+            localStorage.setItem('google_access_token', accessToken);
+            localStorage.setItem('google_token_expiry', String(expiryTime));
+            gapi.client.setToken({access_token: accessToken});
+            updateSigninStatus(true); // Update UI for signed-in state
+          }
+        });
         // Restore token from localStorage if still valid
         const storedToken = localStorage.getItem('google_access_token');
         const tokenExpiry = localStorage.getItem('google_token_expiry');
@@ -207,20 +214,19 @@ async function updateSigninStatus(signedIn) {
 // Triggers OAuth flow to request access token from Google
 function handleSignIn() {
   if (tokenClient) {
-    tokenClient.requestAccessToken({prompt: 'consent'});
+    tokenClient.requestAccessToken({prompt: ''});
+  } else {
+    initGoogleAPI()
+      .then(() => tokenClient.requestAccessToken({prompt: ''}))
+      .catch(error => console.error('Google sign-in initialization failed:', error));
   }
 }
 
 // --- Google Sign-out Handler ---
-// Revokes access token, clears localStorage, and updates UI to signed-out state
+// Clears the local session without revoking the user's Google authorization grant.
 function handleSignOut() {
-  if (accessToken) {
-    google.accounts.oauth2.revoke(accessToken, () => {
-      console.log('Access token revoked');
-    });
-    accessToken = null;
-    gapi.client.setToken(null);
-  }
+  accessToken = null;
+  gapi.client.setToken(null);
   localStorage.removeItem('google_access_token');
   localStorage.removeItem('google_token_expiry');
   updateSigninStatus(false);
