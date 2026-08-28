@@ -259,9 +259,9 @@
         options: { responsive: true, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 8 } } } } }
       });
 
-      // --- Chart 2: Service type distribution by total cost ---
+      // --- Chart 2: Service type distribution by total cost (excludes tires, shown separately) ---
       const allServiceTypeTotals = {};
-      allData.forEach(entry => {
+      allData.filter(entry => !entry.serviceType.toLowerCase().includes('tire')).forEach(entry => {
         const type = entry.serviceType;
         const cost = parseFloat(entry.serviceCost.replace('$', '').replace(/,/g, '')) || 0;
         allServiceTypeTotals[type] = (allServiceTypeTotals[type] || 0) + cost;
