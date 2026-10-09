@@ -679,27 +679,67 @@ document.getElementById('serviceTable').addEventListener('click', function(e) {
 // ========================================
 // SECTION: UPDATE TOTALS AND SUMMARY CARDS
 // ========================================
+// Counts active registry vehicles with no open medium/high issues (same rule as the readiness page).
+async function updateVehiclesReady() {
+  const el = document.getElementById('vehiclesReady');
+  if (!el || !accessToken) return;
+  try {
+    const readinessSheetId = '1NQjYtL1Q-fZbqwcCv3CNkG8t9wqHhET3LmIK-9yTFyk';
+    const norm = s => (s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const [issuesRes, registryRes] = await Promise.all([
+      gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: readinessSheetId, range: 'Form Responses!A:M' }),
+      gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: readinessSheetId, range: "'Vehicle Registry'!A2:G" })
+    ]);
+    const issueRows = (issuesRes.result.values || []).slice(1);
+    const registryRows = registryRes.result.values || [];
+    const active = new Set();
+    registryRows.forEach(r => {
+      const key = norm(`${r[1] || ''} ${r[2] || ''}`);
+      const flag = (r[6] || '').toString().trim().toLowerCase();
+      if (key && ['', 'yes', 'y', 'true', '1'].includes(flag)) active.add(key);
+    });
+    if (active.size === 0) {
+      issueRows.forEach(r => { const key = norm(`${r[1] || ''} ${r[2] || ''}`); if (key) active.add(key); });
+    }
+    const blocked = new Set();
+    issueRows.forEach(r => {
+      const key = norm(`${r[1] || ''} ${r[2] || ''}`);
+      const priority = (r[7] || '').toLowerCase();
+      const reviewed = r[11];
+      if (key && !reviewed && (priority.includes('high') || priority.includes('medium'))) blocked.add(key);
+    });
+    el.innerText = [...active].filter(k => !blocked.has(k)).length;
+  } catch (error) {
+    console.error('Failed to compute vehicles ready:', error);
+  }
+}
+
 function updateTotals() {
   // Update summary cards
   const table = document.getElementById('serviceTable').getElementsByTagName('tbody')[0];
   let totalVehicles = new Set();
   let totalRecords = 0;
   let monthlyCost = 0;
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   for (let i = 0; i < table.rows.length; i++) {
     const row = table.rows[i];
+    if (row.classList.contains('total-row')) continue;
     const vehicleId = row.cells[1]?.innerText || '';
+    const serviceDate = (row.cells[3]?.innerText || '').trim();
     let cost = 0;
     if (row.cells[4]) {
       const parsed = parseFloat(String(row.cells[4].innerText).replace(/[^0-9.\-]/g, ''));
       cost = isNaN(parsed) ? 0 : parsed;
     }
     if (vehicleId) totalVehicles.add(vehicleId);
-    monthlyCost += cost;
+    if (serviceDate.startsWith(currentMonth)) monthlyCost += cost;
     totalRecords++;
   }
   document.getElementById('totalVehicles').innerText = totalVehicles.size;
   document.getElementById('totalRecords').innerText = totalRecords;
   document.getElementById('monthlyCost').innerText = '$' + monthlyCost.toFixed(2);
+  updateVehiclesReady();
   // Update totals by vehicle
   const totalsTable = document.getElementById('totalsTable').getElementsByTagName('tbody')[0];
   totalsTable.innerHTML = '';
