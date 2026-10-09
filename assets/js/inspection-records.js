@@ -830,6 +830,11 @@ async function ensureAccessToken(options = {}) {
     throw new Error('Google sign-in does not work on file:// pages. Open this app with http://localhost (or your deployed HTTPS URL) and sign in there.');
   }
 
+  if (accessToken && Number(localStorage.getItem('google_token_expiry') || 0) <= Date.now()) {
+    accessToken = null;
+    gapi.client.setToken(null);
+  }
+
   if (accessToken) return accessToken;
 
   if (!tokenClient) {
@@ -869,8 +874,39 @@ async function ensureAccessToken(options = {}) {
   localStorage.setItem('google_access_token', accessToken);
   localStorage.setItem('google_token_expiry', String(expiryTime));
   gapi.client.setToken({ access_token: accessToken });
+  updateGoogleAuthButtons();
 
   return accessToken;
+}
+
+function updateGoogleAuthButtons() {
+  const signedIn = Boolean(accessToken) && Number(localStorage.getItem('google_token_expiry') || 0) > Date.now();
+  const inBtn = document.getElementById('googleSignInBtn');
+  const outBtn = document.getElementById('googleSignOutBtn');
+  if (inBtn) inBtn.style.display = signedIn ? 'none' : '';
+  if (outBtn) outBtn.style.display = signedIn ? '' : 'none';
+}
+
+async function handleGoogleSignIn() {
+  try {
+    accessToken = null;
+    await ensureAccessToken({ interactive: true });
+    await importRecordsFromGoogleSheet({ silent: true });
+  } catch (error) {
+    console.error('Google sign-in failed:', error);
+    alert(`Google sign-in failed: ${error.message || error}`);
+  }
+  updateGoogleAuthButtons();
+}
+
+function handleGoogleSignOut() {
+  const token = accessToken;
+  accessToken = null;
+  localStorage.removeItem('google_access_token');
+  localStorage.removeItem('google_token_expiry');
+  if (typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken(null);
+  if (token && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token, () => {});
+  updateGoogleAuthButtons();
 }
 
 async function getTargetSheetTitle() {
@@ -2811,6 +2847,10 @@ function init() {
   renderArchiveTable();
 
   // Pull centralized sheet data on page load so local and online users see the same records.
+  document.getElementById('googleSignInBtn')?.addEventListener('click', handleGoogleSignIn);
+  document.getElementById('googleSignOutBtn')?.addEventListener('click', handleGoogleSignOut);
+  updateGoogleAuthButtons();
+  initGoogleClientIfNeeded().then(updateGoogleAuthButtons).catch(() => {});
   importRecordsFromGoogleSheet({ silent: true });
 }
 
