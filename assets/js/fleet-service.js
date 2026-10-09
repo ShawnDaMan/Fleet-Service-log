@@ -721,7 +721,15 @@ function updateTotals() {
   let totalRecords = 0;
   let monthlyCost = 0;
   const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const isCurrentMonth = text => {
+    const iso = text.match(/^(\d{4})-(\d{1,2})/);
+    const us = text.match(/^(\d{1,2})\/\d{1,2}\/(\d{2,4})/);
+    let y, m;
+    if (iso) { y = +iso[1]; m = +iso[2]; }
+    else if (us) { m = +us[1]; y = +us[2]; if (y < 100) y += 2000; }
+    else return false;
+    return y === now.getFullYear() && m === now.getMonth() + 1;
+  };
   for (let i = 0; i < table.rows.length; i++) {
     const row = table.rows[i];
     if (row.classList.contains('total-row')) continue;
@@ -733,7 +741,7 @@ function updateTotals() {
       cost = isNaN(parsed) ? 0 : parsed;
     }
     if (vehicleId) totalVehicles.add(vehicleId);
-    if (serviceDate.startsWith(currentMonth)) monthlyCost += cost;
+    if (isCurrentMonth(serviceDate)) monthlyCost += cost;
     totalRecords++;
   }
   document.getElementById('totalVehicles').innerText = totalVehicles.size;
